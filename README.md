@@ -18,3 +18,9 @@ Built with Python, Streamlit, Folium, and deployed on Hugging Face Spaces.
 - Weather station data from AEMET (Spain)
 
 This project complies with Copernicus open data attribution requirements.
+
+## Prerequisites
+
+1. Register at https://cds.climate.copernicus.eu
+2. Create `~/.cdsapirc` with your credentials (see [CDS API setup](https://cds.climate.copernicus.eu/how-to-api))
+3. Accept Terms of Use for datasets (links provided in code comments)

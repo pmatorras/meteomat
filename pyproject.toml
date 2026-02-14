@@ -10,10 +10,9 @@ authors = [{name = "Pablo Matorras-Cuevas", email = "pablo.matorras@github.com"}
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    # Note: torch, torchvision, torchaudio must be installed separately
-    # See README for GPU vs CPU installation instructions
     "pandas>=2.0.0",
     "matplotlib>=3.7.0",
+    "cdsapi"
 ]
 
 [tool.setuptools.packages.find]
