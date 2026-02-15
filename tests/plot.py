@@ -1,4 +1,4 @@
-from meteomat.data.fetch import fetch_ensemble_forecast
+from meteomat.datasets.fetch import fetch_ensemble_forecast
 from meteomat.viz.charts import create_weather_dashboard
 
 
@@ -11,8 +11,10 @@ if __name__ == '__main__':
     
     try:
         data = fetch_ensemble_forecast(LOCATION)
-        dashboard = create_weather_dashboard(data, location=LOCATION)
-        print(f"\n✅ SUCCESS! Open {dashboard} in your browser")
+        fig = create_weather_dashboard(data, location=LOCATION)
+        output_file = 'plot/weather_prototype.html'
+        fig.write_html(output_file)
+        print(f"  ✓ Saved to {output_file}")
         
     except Exception as e:
         print(f"\n❌ ERROR: {e}")

@@ -40,7 +40,7 @@ def create_weather_dashboard(data, location=None):
         rows=4, cols=1,
         subplot_titles=(
             'Temperature Forecast (Uncertainty Bands)',
-            'Rainfall Forecast (√ scale for visibility)',
+            'Rainfall Forecast',
             'Wind Speed Forecast (Average, Gusts & Direction)',
             'Relative Humidity Forecast'
         ),
@@ -189,7 +189,7 @@ def create_weather_dashboard(data, location=None):
         row=2, col=1,
         tickmode='array',
         tickvals=np.sqrt(rain_tick_values),
-        ticktext=['' if v == 0 else (str(v) if v >= 1 else f'{v:.1f}') for v in rain_tick_values],
+        ticktext=['0' if v == 0 else (str(v) if v >= 1 else f'{v:.1f}') for v in rain_tick_values],
         range=[0.01, None] 
     )
     
@@ -212,7 +212,4 @@ def create_weather_dashboard(data, location=None):
         hovermode='x unified'
     )
     
-    output_file = 'plot/weather_prototype.html'
-    fig.write_html(output_file)
-    print(f"  ✓ Saved to {output_file}")
-    return output_file
+    return fig

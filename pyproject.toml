@@ -13,6 +13,9 @@ dependencies = [
     "pandas>=2.0.0",
     "matplotlib>=3.7.0",
     "plotly",
+    "folium",
+    "streamlit",
+    "streamlit-folium"
 ]
 
 [tool.setuptools.packages.find]
