@@ -1,5 +1,5 @@
-from meteomat.fetch import fetch_ensemble_forecast
-from meteomat.plot import create_weather_dashboard
+from meteomat.data.fetch import fetch_ensemble_forecast
+from meteomat.viz.charts import create_weather_dashboard
 
 
 
