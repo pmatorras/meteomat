@@ -12,7 +12,7 @@ def geocode_location(query):
     """Convert location name to coordinates using Nominatim"""
     url = "https://nominatim.openstreetmap.org/search"
     params = {'q': query, 'format': 'json', 'limit': 1}
-    headers = {'User-Agent': 'Meteomat/1.0'}
+    headers = {'User-Agent': 'Meteomat/1.1'}
     
     try:
         response = requests.get(url, params=params, headers=headers, timeout=5)
@@ -112,6 +112,3 @@ if st.session_state.forecast_fig is not None:
         components.html(html, height=1000, scrolling=False)
         #st.plotly_chart(st.session_state.forecast_fig, width='stretch', theme="streamlit")
         st.markdown("---")
-else:
-    with forecast_container:
-        st.info("👇 Click anywhere on the map below to see the forecast")
