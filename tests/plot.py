@@ -1,5 +1,6 @@
 from meteomat.datasets.fetch import fetch_ensemble_forecast
-from meteomat.viz.charts import create_weather_dashboard
+from meteomat.viz.charts import create_weather_dashboard, smart_ticks_js
+from pathlib import Path
 
 
 
@@ -13,7 +14,12 @@ if __name__ == '__main__':
         data = fetch_ensemble_forecast(LOCATION)
         fig = create_weather_dashboard(data, location=LOCATION, add_title=True)
         output_file = 'plot/weather_prototype.html'
-        fig.write_html(output_file)
+        fig.write_html(
+            output_file,
+            include_plotlyjs="cdn",
+            post_script=smart_ticks_js(),
+            full_html=True,
+        )
         print(f"  ✓ Saved to {output_file}")
         
     except Exception as e:

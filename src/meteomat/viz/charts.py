@@ -1,6 +1,23 @@
 import numpy as np
 import plotly.graph_objects as go
+import plotly.io as pio
 from plotly.subplots import make_subplots
+from importlib import resources
+from functools import lru_cache
+import plotly.io as pio
+
+@lru_cache
+def smart_ticks_js() -> str:
+    return (resources.files("meteomat.viz.assets") / "smart_ticks.js").read_text(encoding="utf-8")  # [web:76]
+
+def fig_to_streamlit_html(fig) -> str:
+    fig.update_xaxes(hoverformat="%b %d, %H:%M", matches="x")
+    return pio.to_html(
+        fig,
+        full_html=False,
+        include_plotlyjs="cdn",
+        post_script=smart_ticks_js(),
+    )
 
 def direction_to_cardinal(deg):
     """Convert degrees to cardinal direction (N, NE, E, etc.)"""
@@ -39,7 +56,7 @@ def create_weather_dashboard(data, location=None, add_title=None):
     fig = make_subplots(
         rows=4, cols=1,
         subplot_titles=(
-            'Temperature Forecast (Uncertainty Bands)',
+            'Temperature Forecast',
             'Rainfall Forecast',
             'Wind Speed Forecast (Average, Gusts & Direction)',
             'Relative Humidity Forecast'
@@ -174,7 +191,18 @@ def create_weather_dashboard(data, location=None, add_title=None):
     ), row=4, col=1)
     
     # Axis labels
-    fig.update_xaxes(tickformat="%b %d", matches='x', range=[dates[0], dates[-1]])
+    fig.update_xaxes(
+        hoverformat="%b %d, %H:%M",  # Show hours in hover
+        matches='x', 
+        range=[dates[0], dates[-1]],
+        # Dynamic tick formatting based on zoom level
+        tickformatstops=[
+            dict(dtickrange=[None, 86400000], value="%H:%M"),  # < 1 day apart: show only time
+            dict(dtickrange=[86400000, 604800000], value="%b %d %H:%M"),  # 1-7 days: show date + time
+            dict(dtickrange=[604800000, None], value="%b %d")  # > 7 days: show only date
+        ],
+        tickformat="%b %d"  # Default format for full view
+    )
     fig.update_xaxes(title_text="", row=1, col=1)
     fig.update_xaxes(title_text="", row=2, col=1)
     fig.update_xaxes(title_text="", row=3, col=1)
@@ -190,7 +218,8 @@ def create_weather_dashboard(data, location=None, add_title=None):
         tickmode='array',
         tickvals=np.sqrt(rain_tick_values),
         ticktext=['0' if v == 0 else (str(v) if v >= 1 else f'{v:.1f}') for v in rain_tick_values],
-        range=[0.01, None] 
+        autorange=True,
+        autorangeoptions=dict(minallowed=0),
     )
     
     fig.update_yaxes(
@@ -211,5 +240,8 @@ def create_weather_dashboard(data, location=None, add_title=None):
         showlegend=False,
         hovermode='x unified'
     )
-    
+    fig.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+    )
     return fig

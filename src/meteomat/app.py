@@ -1,9 +1,10 @@
 # src/meteomat/app.py
 import streamlit as st
 import folium, requests
+import streamlit.components.v1 as components
 from streamlit_folium import st_folium
 from meteomat.datasets.fetch import fetch_ensemble_forecast
-from meteomat.viz.charts import create_weather_dashboard
+from meteomat.viz.charts import create_weather_dashboard, fig_to_streamlit_html  
 
 
 @st.cache_data(ttl=3600)
@@ -107,7 +108,9 @@ if st.session_state.forecast_fig is not None:
         else:
             st.markdown(f"## 📍 {lat:.2f}°N, {lon:.2f}°E")        
         # Display cached figure (no recreation)
-        st.plotly_chart(st.session_state.forecast_fig, width='stretch', theme="streamlit")
+        html = fig_to_streamlit_html(st.session_state.forecast_fig)
+        components.html(html, height=1000, scrolling=False)
+        #st.plotly_chart(st.session_state.forecast_fig, width='stretch', theme="streamlit")
         st.markdown("---")
 else:
     with forecast_container:
