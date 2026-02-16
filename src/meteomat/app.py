@@ -1,9 +1,26 @@
 # src/meteomat/app.py
 import streamlit as st
-import folium
+import folium, requests
 from streamlit_folium import st_folium
 from meteomat.datasets.fetch import fetch_ensemble_forecast
 from meteomat.viz.charts import create_weather_dashboard
+
+
+@st.cache_data(ttl=3600)
+def geocode_location(query):
+    """Convert location name to coordinates using Nominatim"""
+    url = "https://nominatim.openstreetmap.org/search"
+    params = {'q': query, 'format': 'json', 'limit': 1}
+    headers = {'User-Agent': 'Meteomat/1.0'}
+    
+    try:
+        response = requests.get(url, params=params, headers=headers, timeout=5)
+        if response.ok and response.json():
+            result = response.json()[0]
+            return float(result['lat']), float(result['lon']), result['display_name']
+    except:
+        pass
+    return None, None, None
 
 st.set_page_config(page_title="Meteomat", layout="wide")
 
@@ -14,32 +31,62 @@ if 'last_location' not in st.session_state:
     st.session_state.last_location = None
 if 'forecast_fig' not in st.session_state:
     st.session_state.forecast_fig = None
+if 'map_center' not in st.session_state:
+    st.session_state.map_center = [45.0, 20.0]
+if 'map_zoom' not in st.session_state:
+    st.session_state.map_zoom = 5
+if 'location_name' not in st.session_state:
+    st.session_state.location_name = None
 
 # Create placeholder for forecast at the top
 forecast_container = st.container()
 
+#Search bar
+st.markdown("### 🔍 Search or Click Location")
+search_query = st.text_input(
+    "Search location", 
+    placeholder="e.g., Madrid, Tokyo, Paris...",
+    label_visibility="collapsed"
+)
+if search_query and len(search_query) > 2:
+    lat, lon, name = geocode_location(search_query)
+    if lat and lon:
+        current_location = (round(lat, 4), round(lon, 4))
+        if current_location != st.session_state.last_location:
+            st.session_state.last_location = current_location
+            st.session_state.location_name = name.split(',')[0]
+            st.session_state.map_center = [lat, lon]
+            st.session_state.map_zoom = 10
+            with st.spinner("Fetching forecast..."):
+                location = {"Name": search_query, "lat": lat, "lon": lon}
+                forecast_data = fetch_ensemble_forecast(location=location)
+                location_info = {'name': name.split(',')[0]}
+                st.session_state.forecast_fig = create_weather_dashboard(forecast_data, location_info)
+
 # Map goes below
-st.markdown("### 🗺️ Select Location")
-st.markdown("Click anywhere on the map to see the 7-day ensemble forecast")
+st.markdown("---")
 
 m = folium.Map(
-    location=[50.0, 10.0],
-    zoom_start=4,
+    location=st.session_state.map_center,
+    zoom_start=st.session_state.map_zoom,
     tiles="OpenStreetMap"
 )
+if st.session_state.last_location:
+    folium.Marker(st.session_state.last_location, icon=folium.Icon(color='red')).add_to(m)
 
-map_data = st_folium(m, width=1400, height=500)
+map_data = st_folium(m, width=2400, height=800)
 
 # Check if location actually changed
 if map_data and map_data.get('last_clicked'):
     lat = map_data['last_clicked']['lat']
     lon = map_data['last_clicked']['lng']
     current_location = (round(lat, 4), round(lon, 4))
-    
+
     # Only fetch and create chart if location changed
     if current_location != st.session_state.last_location:
         st.session_state.last_location = current_location
-        
+        st.session_state.location_name = None  # No name for map clicks
+
         with st.spinner("Fetching ensemble forecast..."):
             location = {"Name": "", "lat": lat, "lon": lon}
             forecast_data = fetch_ensemble_forecast(location=location)
@@ -55,8 +102,10 @@ if map_data and map_data.get('last_clicked'):
 if st.session_state.forecast_fig is not None:
     with forecast_container:
         lat, lon = st.session_state.last_location
-        st.markdown(f"## 📍 Forecast for: {lat:.2f}°N, {lon:.2f}°E")
-        
+        if st.session_state.location_name:
+            st.markdown(f"## 📍 {st.session_state.location_name} ({lat:.2f}°N, {lon:.2f}°E)")
+        else:
+            st.markdown(f"## 📍 {lat:.2f}°N, {lon:.2f}°E")        
         # Display cached figure (no recreation)
         st.plotly_chart(st.session_state.forecast_fig, width='stretch', theme="streamlit")
         st.markdown("---")

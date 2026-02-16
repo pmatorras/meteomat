@@ -16,7 +16,7 @@ def direction_to_arrow(deg):
     return arrows[idx]
 
 
-def create_weather_dashboard(data, location=None):
+def create_weather_dashboard(data, location=None, add_title=None):
     """Create visualization with improved rainfall scale"""
     print("\n📊 Creating weather dashboard...")
     
@@ -204,9 +204,9 @@ def create_weather_dashboard(data, location=None):
     
     # Link all x-axes for synchronized hover
     fig.update_xaxes(matches='x')
-    
+    if add_title:
+        fig.update_layout(title=f"Weather Station - {location['name']} (ECMWF Ensemble Forecast)")
     fig.update_layout(
-        title=f"Weather Station - {location['name']} (ECMWF Ensemble Forecast)",
         height=1000,
         showlegend=False,
         hovermode='x unified'
