@@ -11,7 +11,7 @@ if __name__ == '__main__':
     
     try:
         data = fetch_ensemble_forecast(LOCATION)
-        fig = create_weather_dashboard(data, location=LOCATION)
+        fig = create_weather_dashboard(data, location=LOCATION, add_title=True)
         output_file = 'plot/weather_prototype.html'
         fig.write_html(output_file)
         print(f"  ✓ Saved to {output_file}")
