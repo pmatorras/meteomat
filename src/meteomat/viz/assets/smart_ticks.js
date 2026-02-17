@@ -218,8 +218,45 @@
 
   // Update on zoom/pan
   gd.on("plotly_relayout", (e) => {
-    if (gd._smartTicksBusy) return;
-    if (e["xaxis.range[0]"] || e["xaxis.range[1]"] || e["xaxis.autorange"]) applySmartTicks();
+      if (gd._smartTicksBusy) return;
+      
+      // Get data bounds from the first x-axis trace
+      const firstTrace = gd.data?.find(t => t.x && t.x.length > 0);
+      if (!firstTrace) return;
+      
+      const xMin = new Date(firstTrace.x[0]).getTime();
+      const xMax = new Date(firstTrace.x[firstTrace.x.length - 1]).getTime();
+      
+      // Check if user is trying to zoom/pan X-axis
+      if (e["xaxis.range[0]"] !== undefined || e["xaxis.range[1]"] !== undefined) {
+          const currentLayout = gd._fullLayout.xaxis;
+          const r0 = e["xaxis.range[0]"] !== undefined 
+              ? new Date(e["xaxis.range[0]"]).getTime() 
+              : new Date(currentLayout.range[0]).getTime();
+          const r1 = e["xaxis.range[1]"] !== undefined 
+              ? new Date(e["xaxis.range[1]"]).getTime() 
+              : new Date(currentLayout.range[1]).getTime();
+          
+          // Clamp to data bounds
+          const clampedR0 = Math.max(r0, xMin);
+          const clampedR1 = Math.min(r1, xMax);
+          
+          // If clamping changed the range, apply it
+          if (clampedR0 !== r0 || clampedR1 !== r1) {
+              gd._smartTicksBusy = true;
+              Plotly.relayout(gd, {
+                  "xaxis.range": [new Date(clampedR0), new Date(clampedR1)]
+              }).finally(() => { gd._smartTicksBusy = false; });
+              return;
+          }
+      }
+      
+      // Apply smart ticks if range changed
+      if (e["xaxis.range[0]"] || e["xaxis.range[1]"] || e["xaxis.autorange"]) {
+          applySmartTicks();
+      }
+
+
   });
 
   // Update on theme changes
