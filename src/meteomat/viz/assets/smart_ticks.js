@@ -218,8 +218,64 @@
 
   // Update on zoom/pan
   gd.on("plotly_relayout", (e) => {
-    if (gd._smartTicksBusy) return;
-    if (e["xaxis.range[0]"] || e["xaxis.range[1]"] || e["xaxis.autorange"]) applySmartTicks();
+      if (gd._smartTicksBusy) return;
+      
+      console.log("Relayout event keys:", Object.keys(e));
+      
+      // Get data bounds from the first x-axis trace
+      const firstTrace = gd.data?.find(t => t.x && t.x.length > 0);
+      if (!firstTrace) return;
+      
+      const xMin = new Date(firstTrace.x[0]).getTime();
+      const xMax = new Date(firstTrace.x[firstTrace.x.length - 1]).getTime();
+      
+      const allUpdates = {};
+      
+      // Check Y-axes constraints
+      for (const axis of ['yaxis2', 'yaxis3', 'yaxis4']) {
+          if (e[`${axis}.range[0]`] !== undefined && e[`${axis}.range[0]`] < 0) {
+              console.log(`Clamping ${axis}.range[0] from ${e[`${axis}.range[0]`]} to 0`);
+              allUpdates[`${axis}.range[0]`] = 0;
+          }
+      }
+      // Constrain humidity (yaxis4) upper bound to 100%
+      if (e["yaxis4.range[1]"] !== undefined && e["yaxis4.range[1]"] > 100) {
+          console.log(`Clamping yaxis4.range[1] from ${e["yaxis4.range[1]"]} to 100`);
+          allUpdates["yaxis4.range[1]"] = 110;
+      }
+
+      // Check X-axis constraints
+      if (e["xaxis.range[0]"] !== undefined || e["xaxis.range[1]"] !== undefined) {
+          const currentLayout = gd._fullLayout.xaxis;
+          const r0 = e["xaxis.range[0]"] !== undefined
+              ? new Date(e["xaxis.range[0]"]).getTime()
+              : new Date(currentLayout.range[0]).getTime();
+          const r1 = e["xaxis.range[1]"] !== undefined
+              ? new Date(e["xaxis.range[1]"]).getTime()
+              : new Date(currentLayout.range[1]).getTime();
+          
+          const clampedR0 = Math.max(r0, xMin);
+          const clampedR1 = Math.min(r1, xMax);
+          
+          if (clampedR0 !== r0 || clampedR1 !== r1) {
+              allUpdates["xaxis.range"] = [new Date(clampedR0), new Date(clampedR1)];
+          }
+      }
+      
+      // Apply ALL constraints together if any exist
+      if (Object.keys(allUpdates).length > 0) {
+          gd._smartTicksBusy = true;
+          Plotly.relayout(gd, allUpdates).finally(() => { 
+            gd._smartTicksBusy = false; 
+            applySmartTicks();
+          });
+          return;
+      }
+      
+      // Apply smart ticks if range changed
+      if (e["xaxis.range[0]"] || e["xaxis.range[1]"] || e["xaxis.autorange"]) {
+          applySmartTicks();
+      }
   });
 
   // Update on theme changes
