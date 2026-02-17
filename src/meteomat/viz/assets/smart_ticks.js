@@ -265,7 +265,10 @@
       // Apply ALL constraints together if any exist
       if (Object.keys(allUpdates).length > 0) {
           gd._smartTicksBusy = true;
-          Plotly.relayout(gd, allUpdates).finally(() => { gd._smartTicksBusy = false; });
+          Plotly.relayout(gd, allUpdates).finally(() => { 
+            gd._smartTicksBusy = false; 
+            applySmartTicks();
+          });
           return;
       }
       
