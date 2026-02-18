@@ -18,6 +18,7 @@ def create_parser():
     # Download
     download = subparsers.add_parser('download', help='Download data')
     download.add_argument('--era5', action='store_true', help='Copernicus ERA5 data')
-
+    download.add_argument('--aemet', action='store_true', help='Download AEMET station data')
+    download.add_argument('--year', type=int, help='Year (e.g., 2024)', default='2023')
     add_common_args(download)
     return parser
