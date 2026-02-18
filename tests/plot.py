@@ -1,4 +1,4 @@
-from meteomat.datasets.fetch import fetch_ensemble_forecast
+from meteomat.datasets.open_meteo import fetch_ensemble_forecast
 from meteomat.viz.charts import create_weather_dashboard, smart_ticks_js
 from pathlib import Path
 

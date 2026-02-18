@@ -3,7 +3,7 @@ import streamlit as st
 import folium, requests
 import streamlit.components.v1 as components
 from streamlit_folium import st_folium
-from meteomat.datasets.fetch import fetch_ensemble_forecast
+from meteomat.datasets.open_meteo import fetch_ensemble_forecast
 from meteomat.viz.charts import create_weather_dashboard, fig_to_streamlit_html  
 
 

@@ -15,7 +15,8 @@ dependencies = [
     "plotly",
     "folium",
     "streamlit",
-    "streamlit-folium"
+    "streamlit-folium",
+    "cdsapi"
 ]
 
 [tool.setuptools.packages.find]
