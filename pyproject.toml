@@ -15,9 +15,20 @@ dependencies = [
     "plotly",
     "folium",
     "streamlit",
-    "streamlit-folium"
+    "streamlit-folium",
 ]
-
+[project.optional-dependencies]
+train = [ 
+    "cdsapi",
+    "xarray",
+    "zarr",
+    "fsspec",
+    "aiohttp",
+    "requests",
+    "gcsfs",
+    "dask",
+    "netcdf4",
+    ]
 [tool.setuptools.packages.find]
 where = ["src"]
 
