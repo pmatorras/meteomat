@@ -13,7 +13,8 @@ def download_era5_month(
     region_name: str,
     year: int,
     month: int,
-    output_dir: str = "data/era5"
+    output_dir: str = "data/era5",
+    force_refresh: bool = False
 ) -> Path:
     """Download one month of ERA5 data for a region."""
     
@@ -23,7 +24,7 @@ def download_era5_month(
     
     month_file = output_path / f"{region_name}_{year}_{month:02d}.nc"
     
-    if month_file.exists():
+    if month_file.exists() and force_refresh is False:
         return month_file
     
     print(f"  📡 {region_name} {year}-{month:02d}...", end='', flush=True)
@@ -62,7 +63,8 @@ def download_era5_month(
 def download_era5_region_year(
     region_name: str,
     year: int,
-    output_dir: str = "data/era5"
+    output_dir: str = "data/era5",
+    force_refresh: bool = False
 ) -> List[Path]:
     """Download full year for one region (12 monthly files)."""
     
@@ -71,7 +73,7 @@ def download_era5_region_year(
     # Download all months
     month_files = []
     for month in range(1, 13):
-        month_file = download_era5_month(region_name, year, month, output_dir)
+        month_file = download_era5_month(region_name, year, month, output_dir, force_refresh)
         month_files.append(month_file)
     
     print(f"  ✅ All 12 months downloaded")
@@ -82,7 +84,9 @@ def download_all_regions_parallel(
     year: int = 2023,
     regions: Optional[List[str]] = None,
     output_dir: str = "data/era5",
-    max_workers: int = 5
+    max_workers: int = 5,
+    force_refresh: bool = False
+
 ):
     """Download all regions in parallel."""
     
@@ -96,7 +100,7 @@ def download_all_regions_parallel(
     
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         future_to_region = {
-            executor.submit(download_era5_region_year, region, year, output_dir): region
+            executor.submit(download_era5_region_year, region, year, output_dir, force_refresh): region
             for region in regions
         }
         
