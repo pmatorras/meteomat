@@ -37,9 +37,16 @@ def download_era5_month(
         'year': str(year),
         'month': f'{month:02d}',
         'day': [f'{d:02d}' for d in range(1, 32)],
-        'time': [f'{h:02d}:00' for h in range(0, 24)],
+        'time': '00:00',  # Single time point
         'area': region['area'],
+        'data_format': 'netcdf',
+        'download_format': 'unarchived',
+        'product_type': ['reanalysis'],
     }
+
+    # Then use c.retrieve with daily mean dataset
+    c.retrieve('reanalysis-era5-single-levels-monthly-means', request, str(month_file))
+
     
     try:
         c.retrieve('reanalysis-era5-single-levels', request, str(month_file))
