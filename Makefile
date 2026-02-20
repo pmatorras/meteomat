@@ -2,6 +2,7 @@ download:
 	python -m meteomat download --era5 --year=2020
 	python -m meteomat download --era5 --year=2021
 	python -m meteomat download --era5 --year=2022
+	python -m meteomat download --era5 --year=2023
 	python -m meteomat download --era5 --year=2024
 	python -m meteomat download --era5 --year=2025
 
@@ -17,4 +18,4 @@ download_old:
 	python -m meteomat download --era5 --year=2018
 	python -m meteomat download --era5 --year=2019
 
-	
+download_all: download download_old

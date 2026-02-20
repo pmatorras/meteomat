@@ -28,6 +28,8 @@ train = [
     "gcsfs",
     "dask",
     "netcdf4",
+    "h5netcdf",
+    "h5py",
     ]
 [tool.setuptools.packages.find]
 where = ["src"]

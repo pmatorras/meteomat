@@ -21,7 +21,7 @@ TRAINING_REGIONS = {
         "area": [41.0, -6.0, 40.3, -3.5],
     }
 }
-
+'''
 ERA5_VARIABLES = [
     '2m_temperature',
     'total_precipitation',
@@ -30,5 +30,44 @@ ERA5_VARIABLES = [
     'surface_pressure',
     '2m_dewpoint_temperature',
 ]
+'''
+ERA5_VARIABLES = {
+    'daily_mean': ['2m_temperature', '2m_dewpoint_temperature',
+                   '10m_u_component_of_wind', '10m_v_component_of_wind',
+                   'surface_pressure'],
+    'daily_min':  ['2m_temperature'],
+    'daily_max':  ['2m_temperature', '10m_wind_speed'],
+    'daily_sum':  ['total_precipitation'],
+}
+STAT_REQUESTS = {
+    'mean': {
+        'variable': [
+            '2m_temperature',
+            '2m_dewpoint_temperature',
+            '10m_u_component_of_wind',
+            '10m_v_component_of_wind',
+            'surface_pressure',
+        ],
+        'daily_statistic': 'daily_mean',
+    },
+    'min': {
+        'variable': ['2m_temperature'],
+        'daily_statistic': 'daily_min',
+    },
+    'max': {
+    'variable': ['2m_temperature', '10m_u_component_of_wind', '10m_v_component_of_wind'],
+    'daily_statistic': 'daily_max',
+    },
+    'sum': {
+        'variable': ['total_precipitation'],
+        'daily_statistic': 'daily_sum',
+    },
+}
+
+COMMON = {
+    'product_type': 'reanalysis',
+    'time_zone':    'utc+01:00',
+    'frequency':    '1_hourly',
+}
 
 STATIONS_CACHE_FILE = Path("data/aemet_stations_by_region.json")
