@@ -1,8 +1,8 @@
 (function () {
   const gd = document.getElementById("{plot_id}");
   if (!gd) return;
-
-  console.log("smartTicks v6 loaded");
+  const DEBUG = false; 
+  if (DEBUG) console.log("smartTicks v7 loaded");
 
   // ------------------------
   // Formatting helpers
@@ -195,6 +195,7 @@
     const r = gd?._fullLayout?.xaxis?.range;
     if (!r) return;
 
+    if (DEBUG) console.log("applySmartTicks called, _fullLayout.xaxis.range:", r);
     const x0 = new Date(r[0]).getTime();
     const x1 = new Date(r[1]).getTime();
     if (!isFinite(x0) || !isFinite(x1)) return;
@@ -219,9 +220,8 @@
   // Update on zoom/pan
   gd.on("plotly_relayout", (e) => {
       if (gd._smartTicksBusy) return;
-      
-      console.log("Relayout event keys:", Object.keys(e));
-      
+      if (DEBUG) console.log("Relayout event keys:", Object.keys(e));
+
       // Get data bounds from the first x-axis trace
       const firstTrace = gd.data?.find(t => t.x && t.x.length > 0);
       if (!firstTrace) return;
@@ -234,13 +234,13 @@
       // Check Y-axes constraints
       for (const axis of ['yaxis2', 'yaxis3', 'yaxis4']) {
           if (e[`${axis}.range[0]`] !== undefined && e[`${axis}.range[0]`] < 0) {
-              console.log(`Clamping ${axis}.range[0] from ${e[`${axis}.range[0]`]} to 0`);
+              if (DEBUG) console.log(`Clamping ${axis}.range[0] from ${e[`${axis}.range[0]`]} to 0`);
               allUpdates[`${axis}.range[0]`] = 0;
           }
       }
       // Constrain humidity (yaxis4) upper bound to 100%
       if (e["yaxis4.range[1]"] !== undefined && e["yaxis4.range[1]"] > 100) {
-          console.log(`Clamping yaxis4.range[1] from ${e["yaxis4.range[1]"]} to 100`);
+          if (DEBUG) console.log(`Clamping yaxis4.range[1] from ${e["yaxis4.range[1]"]} to 100`);
           allUpdates["yaxis4.range[1]"] = 110;
       }
 
@@ -273,7 +273,7 @@
       }
       
       // Apply smart ticks if range changed
-      if (e["xaxis.range[0]"] || e["xaxis.range[1]"] || e["xaxis.autorange"]) {
+      if (e["xaxis.range[0]"] || e["xaxis.range[1]"] || e["xaxis.range"] ||  e["xaxis.autorange"]) {
           applySmartTicks();
       }
   });
