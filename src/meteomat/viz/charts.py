@@ -26,9 +26,6 @@ def fig_to_streamlit_html(fig, lang="en") -> str:
     smart_ticks = smart_ticks.replace("{plot_id}", plot_id)
     smart_ticks = smart_ticks.replace("{lang}", lang)
     
-
-    print(f"DEBUG: lang parameter = {lang}")
-    print(f"DEBUG: LANG in JS = {smart_ticks[smart_ticks.find('const LANG'):smart_ticks.find('const LANG')+50]}")
     # Inject script at the end
     return html + f"<script>{smart_ticks}</script>"
 
