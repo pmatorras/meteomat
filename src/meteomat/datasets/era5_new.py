@@ -89,29 +89,32 @@ def download_era5_var_year(
 
 
 def extract_regions_from_var_year(
-    variable: str,
-    statistic: str,
-    year: int,
-    output_dir: str = "data/era5",
-    force_refresh: bool = False,
-    delete_spain: bool = True,
+    variable, statistic, year, output_dir="data/era5",
+    force_refresh=False, delete_spain=True
 ):
-    """Slice Spain file into per-region files."""
     label = var_stat_label(variable, statistic)
     spain_file = Path(output_dir) / f"spain_{year}_{label}.nc"
-    ds = xr.open_dataset(spain_file)
 
-    for region_name, region_cfg in TRAINING_REGIONS.items():
+    # Determine which regions still need extraction
+    regions_to_extract = {
+        name: cfg for name, cfg in TRAINING_REGIONS.items()
+        if not (Path(output_dir) / f"{name}_{year}_{label}.nc").exists() or force_refresh
+    }
+
+    if not regions_to_extract:
+        return  # nothing to do, don't even open the Spain file
+
+    ds = xr.open_dataset(spain_file)
+    for region_name, region_cfg in regions_to_extract.items():
         out_file = Path(output_dir) / f"{region_name}_{year}_{label}.nc"
-        if out_file.exists() and not force_refresh:
-            continue
         n, w, s, e = region_cfg['area']
         region_ds = ds.sel(latitude=slice(n, s), longitude=slice(w, e))
         region_ds.to_netcdf(out_file)
-
     ds.close()
+
     if delete_spain:
         spain_file.unlink()
+
 
 
 def download_and_extract(
@@ -121,8 +124,21 @@ def download_and_extract(
     output_dir: str = "data/era5",
     force_refresh: bool = False,
 ):
+    label = var_stat_label(variable, statistic)
+    out_dir = Path(output_dir)
+
+    # Skip entirely if all region files already exist
+    all_regions_done = all(
+        (out_dir / f"{region_name}_{year}_{label}.nc").exists()
+        for region_name in TRAINING_REGIONS
+    )
+    if all_regions_done and not force_refresh:
+        print(f"   ⏭️  Skipping {year} [{label}] — all regions exist")
+        return
+
     download_era5_var_year(variable, statistic, year, output_dir, force_refresh)
     extract_regions_from_var_year(variable, statistic, year, output_dir, force_refresh)
+
 
 
 def download_all_parallel(
