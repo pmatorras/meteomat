@@ -33,9 +33,12 @@ def direction_to_arrow(deg):
     return arrows[idx]
 
 
-def create_weather_dashboard(data, location=None, add_title=None):
+def create_weather_dashboard(data, location=None, add_title=None, lang = "en"):
     """Create visualization with improved rainfall scale"""
     print("\n📊 Creating weather dashboard...")
+    from meteomat.cfg.config import LANG
+    t = LANG[lang]
+
     
     dates = data['dates']
     
@@ -56,10 +59,10 @@ def create_weather_dashboard(data, location=None, add_title=None):
     fig = make_subplots(
         rows=4, cols=1,
         subplot_titles=(
-            'Temperature Forecast',
-            'Rainfall Forecast',
-            'Wind Speed Forecast (Average, Gusts & Direction)',
-            'Relative Humidity Forecast'
+            t['temperature'],
+            t['rainfall'],
+            t['wind'],
+            t['humidity']
         ),
         vertical_spacing=0.08,
         row_heights=[0.25, 0.25, 0.25, 0.25]
@@ -206,7 +209,7 @@ def create_weather_dashboard(data, location=None, add_title=None):
     fig.update_xaxes(title_text="", row=1, col=1)
     fig.update_xaxes(title_text="", row=2, col=1)
     fig.update_xaxes(title_text="", row=3, col=1)
-    fig.update_xaxes(title_text="Date", row=4, col=1)
+    fig.update_xaxes(title_text=t["date"], row=4, col=1)
     
     fig.update_yaxes(title_text="°C", row=1, col=1)
     

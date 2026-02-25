@@ -71,3 +71,26 @@ COMMON = {
 }
 
 STATIONS_CACHE_FILE = Path("data/aemet_stations_by_region.json")
+
+# At the end of config.py
+LANG = {
+    "en": {
+        "title": "🌦️ Meteomat - European Weather Forecasts",
+        "location_search": "Search location",
+        "temperature": "Temperature Forecast",
+        "rainfall": "Rainfall Forecast",
+        "wind": "Wind Speed Forecast (Average, Gusts & Direction)",
+        "humidity": "Relative Humidity Forecast",
+        "date": "date",
+    },
+    "es": {
+        "title": "🌦️ Meteomat - Pronósticos Meteorológicos Europeos",
+        "location_search": "Buscar ubicación",
+        "temperature": "Temperatura",
+        "rainfall": "Precipitaciones",
+        "wind": "Viento / Racha Máxima",
+        "humidity": "Humedad Relativa",
+        "date": "fecha",
+    }
+}
+
