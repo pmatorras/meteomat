@@ -2,17 +2,24 @@
 import streamlit as st
 import folium, requests
 import streamlit.components.v1 as components
+from importlib.metadata import version
 from streamlit_folium import st_folium
 from meteomat.datasets.open_meteo import fetch_ensemble_forecast
 from meteomat.viz.charts import create_weather_dashboard, fig_to_streamlit_html  
+from meteomat.cfg.config import LANG
 
+
+query_params = st.query_params
+default_lang = query_params.get("lang", "en")
+if default_lang not in ["en", "es"]:
+    default_lang = "en"
 
 @st.cache_data(ttl=3600)
 def geocode_location(query):
     """Convert location name to coordinates using Nominatim"""
     url = "https://nominatim.openstreetmap.org/search"
     params = {'q': query, 'format': 'json', 'limit': 1}
-    headers = {'User-Agent': 'Meteomat/1.1'}
+    headers = {'User-Agent': f'Meteomat/{version("meteomat")}'}
     
     try:
         response = requests.get(url, params=params, headers=headers, timeout=5)
@@ -22,10 +29,30 @@ def geocode_location(query):
     except:
         pass
     return None, None, None
-
 st.set_page_config(page_title="Meteomat", layout="wide")
+col1, col2 = st.columns([6, 1])
 
-st.title("🌦️ Meteomat - European Weather Forecasts")
+with col2:
+    default_idx = 0 if default_lang == "en" else 1
+    lang = st.selectbox("🌐", ["🇬🇧 EN", "🇪🇸 ES"], index=default_idx, label_visibility="collapsed", key="lang_selector")
+    lang_code = "en" if "EN" in lang else "es"
+
+# Update URL when language changes
+if lang_code != default_lang:
+    st.query_params["lang"] = lang_code
+    # Regenerate chart with new language if location exists
+    if st.session_state.last_location and st.session_state.forecast_fig:
+        lat, lon = st.session_state.last_location
+        location = {"Name": st.session_state.location_name or "", "lat": lat, "lon": lon}
+        forecast_data = fetch_ensemble_forecast(location=location)
+        location_info = {"name": st.session_state.location_name or f"{lat:.2f}°N, {lon:.2f}°E"}
+        st.session_state.forecast_fig = create_weather_dashboard(forecast_data, location_info, lang=lang_code)
+    st.rerun()
+
+
+t = LANG[lang_code]
+with col1:
+    st.title(t["title"])
 
 # Initialize session state
 if 'last_location' not in st.session_state:
@@ -43,7 +70,7 @@ if 'location_name' not in st.session_state:
 forecast_container = st.container()
 
 #Search bar
-st.markdown("### 🔍 Search or Click Location")
+st.markdown(f'### 🔍 {t["location_search"]}')
 search_query = st.text_input(
     "Search location", 
     placeholder="e.g., Madrid, Tokyo, Paris...",
@@ -62,7 +89,7 @@ if search_query and len(search_query) > 2:
                 location = {"Name": search_query, "lat": lat, "lon": lon}
                 forecast_data = fetch_ensemble_forecast(location=location)
                 location_info = {'name': name.split(',')[0]}
-                st.session_state.forecast_fig = create_weather_dashboard(forecast_data, location_info)
+                st.session_state.forecast_fig = create_weather_dashboard(forecast_data, location_info, lang=lang_code)
 
 # Map goes below
 st.markdown("---")
@@ -96,7 +123,8 @@ if map_data and map_data.get('last_clicked'):
             # Create and cache the figure
             st.session_state.forecast_fig = create_weather_dashboard(
                 forecast_data, 
-                location_info
+                location_info,
+                lang=lang_code
             )
 
 # Display cached forecast
@@ -108,7 +136,7 @@ if st.session_state.forecast_fig is not None:
         else:
             st.markdown(f"## 📍 {lat:.2f}°N, {lon:.2f}°E")        
         # Display cached figure (no recreation)
-        html = fig_to_streamlit_html(st.session_state.forecast_fig)
+        html = fig_to_streamlit_html(st.session_state.forecast_fig, lang=lang_code)
         components.html(html, height=1000, scrolling=False)
         #st.plotly_chart(st.session_state.forecast_fig, width='stretch', theme="streamlit")
         st.markdown("---")

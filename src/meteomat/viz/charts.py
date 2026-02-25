@@ -10,14 +10,24 @@ import plotly.io as pio
 def smart_ticks_js() -> str:
     return (resources.files("meteomat.viz.assets") / "smart_ticks.js").read_text(encoding="utf-8")  # [web:76]
 
-def fig_to_streamlit_html(fig) -> str:
+def fig_to_streamlit_html(fig, lang="en") -> str:
     fig.update_xaxes(hoverformat="%b %d, %H:%M", matches="x")
-    return pio.to_html(
-        fig,
-        full_html=False,
-        include_plotlyjs="cdn",
-        post_script=smart_ticks_js(),
-    )
+    
+    # Generate HTML
+    html = pio.to_html(fig, full_html=False, include_plotlyjs="cdn")
+    
+    # Extract plot div ID from generated HTML
+    import re
+    match = re.search(r'id="([^"]+)"', html)
+    plot_id = match.group(1) if match else "plotly-div"
+    
+    # Get smart_ticks.js and replace placeholders
+    smart_ticks = smart_ticks_js()
+    smart_ticks = smart_ticks.replace("{plot_id}", plot_id)
+    smart_ticks = smart_ticks.replace("{lang}", lang)
+    
+    # Inject script at the end
+    return html + f"<script>{smart_ticks}</script>"
 
 def direction_to_cardinal(deg):
     """Convert degrees to cardinal direction (N, NE, E, etc.)"""
@@ -33,9 +43,12 @@ def direction_to_arrow(deg):
     return arrows[idx]
 
 
-def create_weather_dashboard(data, location=None, add_title=None):
+def create_weather_dashboard(data, location=None, add_title=None, lang = "en"):
     """Create visualization with improved rainfall scale"""
     print("\n📊 Creating weather dashboard...")
+    from meteomat.cfg.config import LANG
+    t = LANG[lang]
+
     
     dates = data['dates']
     
@@ -56,10 +69,10 @@ def create_weather_dashboard(data, location=None, add_title=None):
     fig = make_subplots(
         rows=4, cols=1,
         subplot_titles=(
-            'Temperature Forecast',
-            'Rainfall Forecast',
-            'Wind Speed Forecast (Average, Gusts & Direction)',
-            'Relative Humidity Forecast'
+            t['temperature'],
+            t['rainfall'],
+            t['wind'],
+            t['humidity']
         ),
         vertical_spacing=0.08,
         row_heights=[0.25, 0.25, 0.25, 0.25]
@@ -206,7 +219,7 @@ def create_weather_dashboard(data, location=None, add_title=None):
     fig.update_xaxes(title_text="", row=1, col=1)
     fig.update_xaxes(title_text="", row=2, col=1)
     fig.update_xaxes(title_text="", row=3, col=1)
-    fig.update_xaxes(title_text="Date", row=4, col=1)
+    fig.update_xaxes(title_text=t["date"], row=4, col=1)
     
     fig.update_yaxes(title_text="°C", row=1, col=1)
     
