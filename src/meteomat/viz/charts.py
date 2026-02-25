@@ -10,14 +10,27 @@ import plotly.io as pio
 def smart_ticks_js() -> str:
     return (resources.files("meteomat.viz.assets") / "smart_ticks.js").read_text(encoding="utf-8")  # [web:76]
 
-def fig_to_streamlit_html(fig) -> str:
+def fig_to_streamlit_html(fig, lang="en") -> str:
     fig.update_xaxes(hoverformat="%b %d, %H:%M", matches="x")
-    return pio.to_html(
-        fig,
-        full_html=False,
-        include_plotlyjs="cdn",
-        post_script=smart_ticks_js(),
-    )
+    
+    # Generate HTML
+    html = pio.to_html(fig, full_html=False, include_plotlyjs="cdn")
+    
+    # Extract plot div ID from generated HTML
+    import re
+    match = re.search(r'id="([^"]+)"', html)
+    plot_id = match.group(1) if match else "plotly-div"
+    
+    # Get smart_ticks.js and replace placeholders
+    smart_ticks = smart_ticks_js()
+    smart_ticks = smart_ticks.replace("{plot_id}", plot_id)
+    smart_ticks = smart_ticks.replace("{lang}", lang)
+    
+
+    print(f"DEBUG: lang parameter = {lang}")
+    print(f"DEBUG: LANG in JS = {smart_ticks[smart_ticks.find('const LANG'):smart_ticks.find('const LANG')+50]}")
+    # Inject script at the end
+    return html + f"<script>{smart_ticks}</script>"
 
 def direction_to_cardinal(deg):
     """Convert degrees to cardinal direction (N, NE, E, etc.)"""

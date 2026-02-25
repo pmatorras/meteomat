@@ -1,15 +1,23 @@
 (function () {
   const gd = document.getElementById("{plot_id}");
   if (!gd) return;
+  const LANG = "{lang}"; //Language for the ticks, python controlled
   const DEBUG = false; 
   if (DEBUG) console.log("smartTicks v7 loaded");
 
   // ------------------------
   // Formatting helpers
   // ------------------------
-  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const monthsEN = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const monthsES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+  const daysEN = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  const daysES = ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
   const pad2 = (n) => (n < 10 ? "0" : "") + n;
-  const fmtMD = (d) => `${months[d.getMonth()]} ${pad2(d.getDate())}`;
+  const fmtMD = (d) => {
+    const days = LANG === "es" ? daysES : daysEN;
+    const months_arr = LANG === "es" ? monthsES : monthsEN;
+    return `${days[d.getDay()]} ${months_arr[d.getMonth()]} ${pad2(d.getDate())}`;
+  };
   const fmtHM = (d) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 
   function parseCssColor(c) {

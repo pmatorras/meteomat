@@ -136,7 +136,7 @@ if st.session_state.forecast_fig is not None:
         else:
             st.markdown(f"## 📍 {lat:.2f}°N, {lon:.2f}°E")        
         # Display cached figure (no recreation)
-        html = fig_to_streamlit_html(st.session_state.forecast_fig)
+        html = fig_to_streamlit_html(st.session_state.forecast_fig, lang=lang_code)
         components.html(html, height=1000, scrolling=False)
         #st.plotly_chart(st.session_state.forecast_fig, width='stretch', theme="streamlit")
         st.markdown("---")
