@@ -70,7 +70,7 @@ if 'location_name' not in st.session_state:
 forecast_container = st.container()
 
 #Search bar
-st.markdown(f"### 🔍 {t["location_search"]}")
+st.markdown(f'### 🔍 {t["location_search"]}')
 search_query = st.text_input(
     "Search location", 
     placeholder="e.g., Madrid, Tokyo, Paris...",
