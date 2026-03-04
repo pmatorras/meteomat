@@ -60,7 +60,7 @@ if 'last_location' not in st.session_state:
 if 'forecast_fig' not in st.session_state:
     st.session_state.forecast_fig = None
 if 'map_center' not in st.session_state:
-    st.session_state.map_center = [45.0, 20.0]
+    st.session_state.map_center = [45.0, 00.0]
 if 'map_zoom' not in st.session_state:
     st.session_state.map_zoom = 5
 if 'location_name' not in st.session_state:
@@ -102,7 +102,7 @@ m = folium.Map(
 if st.session_state.last_location:
     folium.Marker(st.session_state.last_location, icon=folium.Icon(color='red')).add_to(m)
 
-map_data = st_folium(m, width=2400, height=800)
+map_data = st_folium(m, width="100%", height=600)
 
 # Check if location actually changed
 if map_data and map_data.get('last_clicked'):

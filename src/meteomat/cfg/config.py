@@ -77,10 +77,10 @@ LANG = {
     "en": {
         "title": "🌦️ Meteomat - European Weather Forecasts",
         "location_search": "Search location",
-        "temperature": "Temperature Forecast",
-        "rainfall": "Rainfall Forecast",
-        "wind": "Wind Speed Forecast (Average, Gusts & Direction)",
-        "humidity": "Relative Humidity Forecast",
+        "temperature": "Temperature",
+        "rainfall": "Rainfall",
+        "wind": "Wind Speed / Gusts",
+        "humidity": "Relative Humidity",
         "date": "date",
     },
     "es": {

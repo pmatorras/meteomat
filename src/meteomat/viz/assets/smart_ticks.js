@@ -20,6 +20,11 @@
   };
   const fmtHM = (d) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 
+  // Short label for narrow screens: "Wed 4" / "Mié 4"
+  const fmtShort = (d) => {
+    const days = LANG === "es" ? daysES : daysEN;
+    return `${days[d.getDay()]} ${d.getDate()}`;
+  };
   function parseCssColor(c) {
     if (!c) return null;
     c = c.trim();
@@ -156,7 +161,7 @@
     return d.getTime();
   }
 
-  function computeTicks(x0, x1) {
+  function computeTicks(x0, x1, isNarrow) {
     const spanHours = (x1 - x0) / 36e5;
     const stepHours = chooseStepHours(spanHours);
     const stepMs = stepHours * 36e5;
@@ -171,7 +176,8 @@
       for (; t <= x1 + 1; t += 24 * 36e5) {
         const d = new Date(t);
         tickvals.push(t);
-        ticktext.push(fmtMD(d));
+        // Use fmtShort if narrow
+        ticktext.push(isNarrow ? fmtShort(d) : fmtMD(d));
       }
       return { tickvals, ticktext };
     }
@@ -184,11 +190,14 @@
       const isMidnight = d.getHours() === 0 && d.getMinutes() === 0;
 
       let label;
+      // Define dateLabel based on screen width
+      const dateLabel = isNarrow ? fmtShort(d) : fmtMD(d);
+      
       if (!multiDay) {
-        label = (tickvals.length === 0) ? `${fmtMD(d)}<br>${fmtHM(d)}` : fmtHM(d);
+        label = (tickvals.length === 0) ? `${dateLabel}<br>${fmtHM(d)}` : fmtHM(d);
       } else {
-        if (isMidnight) label = fmtMD(d);
-        else if (tickvals.length === 0) label = `${fmtMD(d)}<br>${fmtHM(d)}`;
+        if (isMidnight) label = dateLabel;
+        else if (tickvals.length === 0) label = `${dateLabel}<br>${fmtHM(d)}`;
         else label = fmtHM(d);
       }
 
@@ -208,7 +217,11 @@
     const x1 = new Date(r[1]).getTime();
     if (!isFinite(x0) || !isFinite(x1)) return;
 
-    const out = computeTicks(x0, x1);
+    // check if plot is narrow (e.g. mobile)
+    const isNarrow = gd.offsetWidth < 430;
+
+    // pass isNarrow to computeTicks
+    const out = computeTicks(x0, x1, isNarrow);
     const updates = {};
 
     for (const ax of allAxes("xaxis")) {
@@ -221,7 +234,7 @@
     Plotly.relayout(gd, updates).finally(() => { gd._smartTicksBusy = false; });
   }
 
-  // Initial
+  // Initialize
   applyStreamlitStyle();
   applySmartTicks();
 
