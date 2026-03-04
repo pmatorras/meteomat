@@ -1,0 +1,8 @@
+license: mit
+title: Meteomat
+sdk: docker
+emoji: 🌦️
+colorFrom: blue
+colorTo: indigo
+short_description: ' Probabilistic rainfall forecasts with viz'
+app_file: src/meteomat/app.py
