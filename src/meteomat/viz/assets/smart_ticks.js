@@ -20,6 +20,11 @@
   };
   const fmtHM = (d) => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 
+  // Short label for narrow screens: "Wed 4" / "Mié 4"
+  const fmtShort = (d) => {
+    const days = LANG === "es" ? daysES : daysEN;
+    return `${days[d.getDay()]} ${d.getDate()}`;
+  };
   function parseCssColor(c) {
     if (!c) return null;
     c = c.trim();
@@ -156,7 +161,7 @@
     return d.getTime();
   }
 
-  function computeTicks(x0, x1) {
+  function computeTicks(x0, x1, isNarrow) {
     const spanHours = (x1 - x0) / 36e5;
     const stepHours = chooseStepHours(spanHours);
     const stepMs = stepHours * 36e5;
@@ -171,7 +176,8 @@
       for (; t <= x1 + 1; t += 24 * 36e5) {
         const d = new Date(t);
         tickvals.push(t);
-        ticktext.push(fmtMD(d));
+        // Use fmtShort if narrow
+        ticktext.push(isNarrow ? fmtShort(d) : fmtMD(d));
       }
       return { tickvals, ticktext };
     }
@@ -184,11 +190,14 @@
       const isMidnight = d.getHours() === 0 && d.getMinutes() === 0;
 
       let label;
+      // Define dateLabel based on screen width
+      const dateLabel = isNarrow ? fmtShort(d) : fmtMD(d);
+      
       if (!multiDay) {
-        label = (tickvals.length === 0) ? `${fmtMD(d)}<br>${fmtHM(d)}` : fmtHM(d);
+        label = (tickvals.length === 0) ? `${dateLabel}<br>${fmtHM(d)}` : fmtHM(d);
       } else {
-        if (isMidnight) label = fmtMD(d);
-        else if (tickvals.length === 0) label = `${fmtMD(d)}<br>${fmtHM(d)}`;
+        if (isMidnight) label = dateLabel;
+        else if (tickvals.length === 0) label = `${dateLabel}<br>${fmtHM(d)}`;
         else label = fmtHM(d);
       }
 
@@ -208,7 +217,11 @@
     const x1 = new Date(r[1]).getTime();
     if (!isFinite(x0) || !isFinite(x1)) return;
 
-    const out = computeTicks(x0, x1);
+    // check if plot is narrow (e.g. mobile)
+    const isNarrow = gd.offsetWidth < 430;
+
+    // pass isNarrow to computeTicks
+    const out = computeTicks(x0, x1, isNarrow);
     const updates = {};
 
     for (const ax of allAxes("xaxis")) {
@@ -221,7 +234,7 @@
     Plotly.relayout(gd, updates).finally(() => { gd._smartTicksBusy = false; });
   }
 
-  // Initial
+  // Initialize
   applyStreamlitStyle();
   applySmartTicks();
 
@@ -240,14 +253,36 @@
       const allUpdates = {};
       
       // Check Y-axes constraints
-      for (const axis of ['yaxis2', 'yaxis3', 'yaxis4']) {
-          if (e[`${axis}.range[0]`] !== undefined && e[`${axis}.range[0]`] < 0) {
-              if (DEBUG) console.log(`Clamping ${axis}.range[0] from ${e[`${axis}.range[0]`]} to 0`);
-              allUpdates[`${axis}.range[0]`] = 0;
-          }
+      // Temperature (yaxis)
+      if (e["yaxis.range[1]"] !== undefined && e["yaxis.range[1]"] > 60) {
+          allUpdates["yaxis.range[1]"] = 60; // Max 60°C
       }
+      if (e["yaxis.range[0]"] !== undefined && e["yaxis.range[0]"] < -60) {
+          allUpdates["yaxis.range[0]"] = -60; // Min -40°C
+      }
+
+      // Rainfall (yaxis2)
+      if (e["yaxis2.range[0]"] !== undefined && e["yaxis2.range[0]"] < 0) {
+          allUpdates["yaxis2.range[0]"] = 0; // Min 0
+      }
+      if (e["yaxis2.range[1]"] !== undefined && e["yaxis2.range[1]"] > 10) { // Note: 10 in sqrt scale is 100 mm/h
+          allUpdates["yaxis2.range[1]"] = 10;
+      }
+
+      // Wind (yaxis3)
+      if (e["yaxis3.range[0]"] !== undefined && e["yaxis3.range[0]"] < 0) {
+          allUpdates["yaxis3.range[0]"] = 0; // Min 0
+      }
+      if (e["yaxis3.range[1]"] !== undefined && e["yaxis3.range[1]"] > 250) {
+          allUpdates["yaxis3.range[1]"] = 250; // Max 250 km/h
+      }
+
       // Constrain humidity (yaxis4) upper bound to 100%
-      if (e["yaxis4.range[1]"] !== undefined && e["yaxis4.range[1]"] > 100) {
+      if (e["yaxis4.range[0]"] !== undefined && e["yaxis4.range[0]"] < 0) {
+          allUpdates["yaxis4.range[0]"] = 0; // Min 0
+      }
+
+      if (e["yaxis4.range[1]"] !== undefined && e["yaxis4.range[1]"] > 102) {
           if (DEBUG) console.log(`Clamping yaxis4.range[1] from ${e["yaxis4.range[1]"]} to 100`);
           allUpdates["yaxis4.range[1]"] = 110;
       }
