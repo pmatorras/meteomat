@@ -253,14 +253,36 @@
       const allUpdates = {};
       
       // Check Y-axes constraints
-      for (const axis of ['yaxis2', 'yaxis3', 'yaxis4']) {
-          if (e[`${axis}.range[0]`] !== undefined && e[`${axis}.range[0]`] < 0) {
-              if (DEBUG) console.log(`Clamping ${axis}.range[0] from ${e[`${axis}.range[0]`]} to 0`);
-              allUpdates[`${axis}.range[0]`] = 0;
-          }
+      // Temperature (yaxis)
+      if (e["yaxis.range[1]"] !== undefined && e["yaxis.range[1]"] > 60) {
+          allUpdates["yaxis.range[1]"] = 60; // Max 60°C
       }
+      if (e["yaxis.range[0]"] !== undefined && e["yaxis.range[0]"] < -60) {
+          allUpdates["yaxis.range[0]"] = -60; // Min -40°C
+      }
+
+      // Rainfall (yaxis2)
+      if (e["yaxis2.range[0]"] !== undefined && e["yaxis2.range[0]"] < 0) {
+          allUpdates["yaxis2.range[0]"] = 0; // Min 0
+      }
+      if (e["yaxis2.range[1]"] !== undefined && e["yaxis2.range[1]"] > 10) { // Note: 10 in sqrt scale is 100 mm/h
+          allUpdates["yaxis2.range[1]"] = 10;
+      }
+
+      // Wind (yaxis3)
+      if (e["yaxis3.range[0]"] !== undefined && e["yaxis3.range[0]"] < 0) {
+          allUpdates["yaxis3.range[0]"] = 0; // Min 0
+      }
+      if (e["yaxis3.range[1]"] !== undefined && e["yaxis3.range[1]"] > 250) {
+          allUpdates["yaxis3.range[1]"] = 250; // Max 250 km/h
+      }
+
       // Constrain humidity (yaxis4) upper bound to 100%
-      if (e["yaxis4.range[1]"] !== undefined && e["yaxis4.range[1]"] > 100) {
+      if (e["yaxis4.range[0]"] !== undefined && e["yaxis4.range[0]"] < 0) {
+          allUpdates["yaxis4.range[0]"] = 0; // Min 0
+      }
+
+      if (e["yaxis4.range[1]"] !== undefined && e["yaxis4.range[1]"] > 102) {
           if (DEBUG) console.log(`Clamping yaxis4.range[1] from ${e["yaxis4.range[1]"]} to 100`);
           allUpdates["yaxis4.range[1]"] = 110;
       }
