@@ -14,6 +14,11 @@ default_lang = query_params.get("lang", "en")
 if default_lang not in ["en", "es"]:
     default_lang = "en"
 
+# NEW: read lat/lon from URL on load
+default_lat = float(query_params["lat"]) if "lat" in query_params else None
+default_lon = float(query_params["lon"]) if "lon" in query_params else None
+default_name = query_params.get("name", None)
+
 @st.cache_data(ttl=3600)
 def geocode_location(query):
     """Convert location name to coordinates using Nominatim"""
@@ -29,6 +34,20 @@ def geocode_location(query):
     except:
         pass
     return None, None, None
+
+# helper to notify parent iframe of current state
+def notify_parent(lat, lon, lang_code, name=""):
+    components.html(f"""
+    <script>
+    window.parent.postMessage({{
+        lat: {lat},
+        lon: {lon},
+        lang: '{lang_code}',
+        name: '{name}'
+    }}, '*');
+    </script>
+    """, height=0)
+
 st.set_page_config(page_title="Meteomat", layout="wide")
 col1, col2 = st.columns([6, 1])
 
@@ -40,7 +59,6 @@ with col2:
 # Update URL when language changes
 if lang_code != default_lang:
     st.query_params["lang"] = lang_code
-    # Regenerate chart with new language if location exists
     if st.session_state.last_location and st.session_state.forecast_fig:
         lat, lon = st.session_state.last_location
         location = {"Name": st.session_state.location_name or "", "lat": lat, "lon": lon}
@@ -49,22 +67,31 @@ if lang_code != default_lang:
         st.session_state.forecast_fig = create_weather_dashboard(forecast_data, location_info, lang=lang_code)
     st.rerun()
 
-
 t = LANG[lang_code]
 with col1:
     st.title(t["title"])
 
 # Initialize session state
 if 'last_location' not in st.session_state:
-    st.session_state.last_location = None
+    # seed from URL params if present
+    st.session_state.last_location = (default_lat, default_lon) if default_lat and default_lon else None
 if 'forecast_fig' not in st.session_state:
     st.session_state.forecast_fig = None
 if 'map_center' not in st.session_state:
-    st.session_state.map_center = [45.0, 00.0]
+    # center map on URL location if present
+    st.session_state.map_center = [default_lat, default_lon] if default_lat and default_lon else [45.0, 0.0]
 if 'map_zoom' not in st.session_state:
-    st.session_state.map_zoom = 5
+    st.session_state.map_zoom = 10 if default_lat else 5  # NEW: zoom in if location given
 if 'location_name' not in st.session_state:
-    st.session_state.location_name = None
+    st.session_state.location_name = default_name
+
+# if loaded with lat/lon from URL and no forecast yet, fetch it now
+if default_lat and default_lon and st.session_state.forecast_fig is None:
+    with st.spinner("Fetching forecast..."):
+        location = {"Name": default_name or "", "lat": default_lat, "lon": default_lon}
+        forecast_data = fetch_ensemble_forecast(location=location)
+        location_info = {"name": default_name or f"{default_lat:.2f}°N, {default_lon:.2f}°E"}
+        st.session_state.forecast_fig = create_weather_dashboard(forecast_data, location_info, lang=lang_code)
 
 # Create placeholder for forecast at the top
 forecast_container = st.container()
@@ -85,6 +112,10 @@ if search_query and len(search_query) > 2:
             st.session_state.location_name = name.split(',')[0]
             st.session_state.map_center = [lat, lon]
             st.session_state.map_zoom = 10
+            # write to URL
+            st.query_params["lat"] = str(round(lat, 4))
+            st.query_params["lon"] = str(round(lon, 4))
+            st.query_params["name"] = name.split(',')[0]
             with st.spinner("Fetching forecast..."):
                 location = {"Name": search_query, "lat": lat, "lon": lon}
                 forecast_data = fetch_ensemble_forecast(location=location)
@@ -104,23 +135,24 @@ if st.session_state.last_location:
 
 map_data = st_folium(m, width="100%", height=600)
 
-# Check if location actually changed
 if map_data and map_data.get('last_clicked'):
     lat = map_data['last_clicked']['lat']
     lon = map_data['last_clicked']['lng']
     current_location = (round(lat, 4), round(lon, 4))
 
-    # Only fetch and create chart if location changed
     if current_location != st.session_state.last_location:
         st.session_state.last_location = current_location
-        st.session_state.location_name = None  # No name for map clicks
+        st.session_state.location_name = None
+        # write to URL
+        st.query_params["lat"] = str(round(lat, 4))
+        st.query_params["lon"] = str(round(lon, 4))
+        if "name" in st.query_params:
+            del st.query_params["name"]
 
         with st.spinner("Fetching ensemble forecast..."):
             location = {"Name": "", "lat": lat, "lon": lon}
             forecast_data = fetch_ensemble_forecast(location=location)
             location_info = {'name': f'{lat:.2f}°N, {lon:.2f}°E'}
-            
-            # Create and cache the figure
             st.session_state.forecast_fig = create_weather_dashboard(
                 forecast_data, 
                 location_info,
@@ -135,8 +167,11 @@ if st.session_state.forecast_fig is not None:
             st.markdown(f"## 📍 {st.session_state.location_name} ({lat:.2f}°N, {lon:.2f}°E)")
         else:
             st.markdown(f"## 📍 {lat:.2f}°N, {lon:.2f}°E")        
-        # Display cached figure (no recreation)
         html = fig_to_streamlit_html(st.session_state.forecast_fig, lang=lang_code)
         components.html(html, height=1000, scrolling=False)
-        #st.plotly_chart(st.session_state.forecast_fig, width='stretch', theme="streamlit")
         st.markdown("---")
+
+# NEW: notify parent iframe of current state (for meteo.matorras.com address bar)
+if st.session_state.last_location:
+    lat, lon = st.session_state.last_location
+    notify_parent(lat, lon, lang_code, st.session_state.location_name or "")
