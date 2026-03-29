@@ -39,7 +39,7 @@ def geocode_location(query):
 def notify_parent(lat, lon, lang_code, name=""):
     components.html(f"""
     <script>
-    window.parent.postMessage({{
+    window.top.postMessage({{
         lat: {lat},
         lon: {lon},
         lang: '{lang_code}',
