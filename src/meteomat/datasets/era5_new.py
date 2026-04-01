@@ -176,6 +176,6 @@ if __name__ == "__main__":
     # download_and_extract('2m_temperature', 'daily_minimum', 2020)
 
     download_all_parallel(
-        years=list(range(2020, 2027)),
+        years=list(range(2015, 2018)),
         max_workers=5,
     )
