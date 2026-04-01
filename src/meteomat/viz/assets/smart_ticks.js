@@ -94,7 +94,7 @@
       text: `rgb(${textRgb.r},${textRgb.g},${textRgb.b})`,
       // no vertical lines, so only y-grid matters; keep it subtle/grey
       grid: rgba(gridBase, isDark ? 0.10 : 0.12),
-      axis: rgba(gridBase, isDark ? 0.28 : 0.22),
+      axis: rgba(gridBase, isDark ? 0.28 : 0.62),
 
       // hover background: MORE transparent (smaller alpha)
       hoverBg: isDark ? "rgba(10,10,10,0.8)" : "rgba(255,255,255,0.0.8)",
@@ -140,6 +140,17 @@
       updates[`${ax}.linecolor`] = t.axis;
       updates[`${ax}.tickcolor`] = t.axis;
     }
+
+    // Disable drag-to-zoom on narrow screens (phones) to allow page scrolling
+    if (gd.offsetWidth < 430) {
+      updates["dragmode"] = false;
+    }
+
+    // Subplot titles are annotations — apply text colour explicitly
+    const annotations = gd._fullLayout?.annotations || [];
+    annotations.forEach((_, i) => {
+      updates[`annotations[${i}].font.color`] = t.text;
+    });
 
     Plotly.relayout(gd, updates);
   }
