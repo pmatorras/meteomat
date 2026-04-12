@@ -1,4 +1,5 @@
 # src/meteomat/app.py
+import json
 import streamlit as st
 import folium, requests
 import streamlit.components.v1 as components
@@ -72,15 +73,12 @@ if (default_lat is None or default_lon is None) and default_name:
 
 
 # helper to notify parent iframe of current state
+
 def notify_parent(lat, lon, lang_code, name=""):
+    payload = json.dumps({"lat": lat, "lon": lon, "lang": lang_code, "name": name})
     components.html(f"""
     <script>
-    window.top.postMessage({{
-        lat: {lat},
-        lon: {lon},
-        lang: '{lang_code}',
-        name: '{name}'
-    }}, '*');
+    window.top.postMessage({payload}, '*');
     </script>
     """, height=0)
 

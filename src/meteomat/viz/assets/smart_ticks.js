@@ -65,15 +65,29 @@
   // ------------------------
   function readStreamlitCssVars() {
     try {
+      // Try CSS vars on :root first
       const root = parent.document.documentElement;
-      const s = getComputedStyle(root);
-      return {
-        bg: s.getPropertyValue("--background-color").trim(),
-        text: s.getPropertyValue("--text-color").trim(),
-      };
-    } catch (e) {
-      return { bg: "", text: "" };
-    }
+      const rootS = getComputedStyle(root);
+      const rootBg = rootS.getPropertyValue("--background-color").trim();
+      const rootText = rootS.getPropertyValue("--text-color").trim();
+      if (rootBg) return { bg: rootBg, text: rootText };
+
+      // Streamlit may set CSS vars on stApp rather than :root
+      const appEl = parent.document.querySelector('[data-testid="stApp"]');
+      if (appEl) {
+        const appS = getComputedStyle(appEl);
+        const appBg = appS.getPropertyValue("--background-color").trim();
+        const appText = appS.getPropertyValue("--text-color").trim();
+        if (appBg) return { bg: appBg, text: appText };
+
+        // Last resort: actual computed background (skip transparent)
+        const computed = appS.backgroundColor;
+        if (computed && computed !== "rgba(0, 0, 0, 0)" && computed !== "transparent") {
+          return { bg: computed, text: appS.color };
+        }
+      }
+    } catch (e) {}
+    return { bg: "", text: "" };
   }
 
   function computeTheme() {
@@ -94,10 +108,10 @@
       text: `rgb(${textRgb.r},${textRgb.g},${textRgb.b})`,
       // no vertical lines, so only y-grid matters; keep it subtle/grey
       grid: rgba(gridBase, isDark ? 0.10 : 0.12),
-      axis: rgba(gridBase, isDark ? 0.28 : 0.22),
+      axis: rgba(gridBase, isDark ? 0.28 : 0.62),
 
       // hover background: MORE transparent (smaller alpha)
-      hoverBg: isDark ? "rgba(10,10,10,0.8)" : "rgba(255,255,255,0.0.8)",
+      hoverBg: isDark ? "rgba(10,10,10,0.8)" : "rgba(255,255,255,0.8)",
       hoverBorder: rgba(gridBase, isDark ? 0.25 : 0.20),
     };
   }
@@ -140,6 +154,17 @@
       updates[`${ax}.linecolor`] = t.axis;
       updates[`${ax}.tickcolor`] = t.axis;
     }
+
+    // Disable drag-to-zoom on narrow screens (phones) to allow page scrolling
+    if (gd.offsetWidth < 430) {
+      updates["dragmode"] = false;
+    }
+
+    // Subplot titles are annotations — apply text colour explicitly
+    const annotations = gd._fullLayout?.annotations || [];
+    annotations.forEach((_, i) => {
+      updates[`annotations[${i}].font.color`] = t.text;
+    });
 
     Plotly.relayout(gd, updates);
   }
@@ -321,7 +346,11 @@
       }
   });
 
-  // Update on theme changes
+  // Update on theme changes — watch both root attribute changes and head <style> injections
   const obs = new MutationObserver(() => applyStreamlitStyle());
   obs.observe(parent.document.documentElement, { attributes: true, attributeFilter: ["style", "class"] });
+  try {
+    // Streamlit changes theme by injecting/updating <style> in <head>
+    obs.observe(parent.document.head, { childList: true });
+  } catch (e) {}
 })();
