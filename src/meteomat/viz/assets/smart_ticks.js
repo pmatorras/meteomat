@@ -313,7 +313,18 @@
       }
 
       // Check X-axis constraints
-      if (e["xaxis.range[0]"] !== undefined || e["xaxis.range[1]"] !== undefined) {
+      if (e["xaxis.autorange"]) {
+          // Autoscale button: override Plotly's padded autorange with exact data bounds.
+          // Include ticks in the same relayout so the label at the range edge is not clipped.
+          const isNarrow = gd.offsetWidth < 430;
+          const out = computeTicks(xMin, xMax, isNarrow);
+          allUpdates["xaxis.range"] = [new Date(xMin), new Date(xMax)];
+          for (const ax of allAxes("xaxis")) {
+              allUpdates[`${ax}.tickmode`] = "array";
+              allUpdates[`${ax}.tickvals`] = out.tickvals;
+              allUpdates[`${ax}.ticktext`] = out.ticktext;
+          }
+      } else if (e["xaxis.range[0]"] !== undefined || e["xaxis.range[1]"] !== undefined) {
           const currentLayout = gd._fullLayout.xaxis;
           const r0 = e["xaxis.range[0]"] !== undefined
               ? new Date(e["xaxis.range[0]"]).getTime()
@@ -321,10 +332,10 @@
           const r1 = e["xaxis.range[1]"] !== undefined
               ? new Date(e["xaxis.range[1]"]).getTime()
               : new Date(currentLayout.range[1]).getTime();
-          
+
           const clampedR0 = Math.max(r0, xMin);
           const clampedR1 = Math.min(r1, xMax);
-          
+
           if (clampedR0 !== r0 || clampedR1 !== r1) {
               allUpdates["xaxis.range"] = [new Date(clampedR0), new Date(clampedR1)];
           }
@@ -333,9 +344,10 @@
       // Apply ALL constraints together if any exist
       if (Object.keys(allUpdates).length > 0) {
           gd._smartTicksBusy = true;
-          Plotly.relayout(gd, allUpdates).finally(() => { 
-            gd._smartTicksBusy = false; 
-            applySmartTicks();
+          const ticksIncluded = "xaxis.tickvals" in allUpdates;
+          Plotly.relayout(gd, allUpdates).finally(() => {
+            gd._smartTicksBusy = false;
+            if (!ticksIncluded) applySmartTicks();
           });
           return;
       }

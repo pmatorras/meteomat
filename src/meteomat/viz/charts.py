@@ -168,15 +168,15 @@ def create_weather_dashboard(data, location=None, add_title=None, lang = "en"):
         hovertemplate='<b>Gusts:</b> %{y:.0f} km/h (%{text})<extra></extra>'
     ), row=3, col=1)
     
-    # Wind direction arrows
+    # Wind direction arrows — anchored to the top of the wind subplot (domain coords)
+    # so they never inflate the y-axis autorange
     arrow_interval = max(1, len(dates) // 12)
     for i in range(0, len(dates), arrow_interval):
         arrow = direction_to_arrow(data['wind_direction'][i])
-        y_pos = data['wind_gusts'][i]+16
         fig.add_annotation(
-            x=dates[i], y=y_pos, text=arrow, showarrow=False,
+            x=dates[i], y=0.97, text=arrow, showarrow=False,
             font=dict(size=16, color='rgb(0, 120, 90)'),
-            xref='x3', yref='y3', xanchor='center', yanchor='middle'
+            xref='x3', yref='y3 domain', xanchor='center', yanchor='top'
         )
     
     # === HUMIDITY ===
@@ -236,12 +236,12 @@ def create_weather_dashboard(data, location=None, add_title=None, lang = "en"):
     )
     
     fig.update_yaxes(
-        title_text="km/h", 
-        row=3, 
+        title_text="km/h",
+        row=3,
         col=1,
-        rangemode='nonnegative',  # Keeps it above 0 but no tick at 0
-        range=[0.01, None] 
-)
+        autorange=True,
+        autorangeoptions=dict(minallowed=0),
+    )
     fig.update_yaxes(title_text="%", row=4, col=1)
     
     # Link all x-axes for synchronized hover

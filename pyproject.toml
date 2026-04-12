@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "meteomat"
-version = "1.5.1"
+version = "1.6.1"
 description = "Probabilistic rainfall forecasts for Europe with ensemble uncertainty visualization "
 authors = [{name = "Pablo Matorras-Cuevas", email = "pablo.matorras@github.com"}]
 readme = "README.md"
