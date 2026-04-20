@@ -2,7 +2,6 @@
 import json
 import streamlit as st
 import folium, requests
-import streamlit.components.v1 as components
 from importlib.metadata import version
 from streamlit_folium import st_folium
 from meteomat.datasets.open_meteo import fetch_ensemble_forecast
@@ -76,11 +75,11 @@ if (default_lat is None or default_lon is None) and default_name:
 
 def notify_parent(lat, lon, lang_code, name=""):
     payload = json.dumps({"lat": lat, "lon": lon, "lang": lang_code, "name": name})
-    components.html(f"""
+    st.html(f"""
     <script>
     window.top.postMessage({payload}, '*');
     </script>
-    """, height=0)
+    """)
 
 
 st.set_page_config(page_title="Meteomat", layout="wide")
@@ -206,7 +205,8 @@ if st.session_state.forecast_fig is not None:
         else:
             st.markdown(f"## 📍 {lat:.2f}°N, {lon:.2f}°E")
         html = fig_to_streamlit_html(st.session_state.forecast_fig, lang=lang_code)
-        components.html(html, height=1000, scrolling=False)
+        html = html.replace("<head>", "<head><style>html,body{overflow:hidden}</style>", 1)
+        st.iframe(html, height=1000)
         st.markdown("---")
 
 # Notify parent iframe of current state (for meteo.matorras.com address bar)
