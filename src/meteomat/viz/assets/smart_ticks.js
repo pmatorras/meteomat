@@ -316,8 +316,10 @@
       if (e["xaxis.autorange"]) {
           // Autoscale button: override Plotly's padded autorange with exact data bounds.
           // Include ticks in the same relayout so the label at the range edge is not clipped.
+          // Also set autorange=false so Plotly doesn't re-apply its own padded range afterward.
           const isNarrow = gd.offsetWidth < 430;
           const out = computeTicks(xMin, xMax, isNarrow);
+          allUpdates["xaxis.autorange"] = false;
           allUpdates["xaxis.range"] = [new Date(xMin), new Date(xMax)];
           for (const ax of allAxes("xaxis")) {
               allUpdates[`${ax}.tickmode`] = "array";
