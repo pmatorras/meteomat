@@ -101,5 +101,15 @@ def start_bot_thread():
         return
     _started = True
     import threading
-    threading.Thread(target=lambda: asyncio.run(_run()), daemon=True).start()
+    import time
+
+    def _run_with_retry():
+        while True:
+            try:
+                asyncio.run(_run())
+            except Exception as e:
+                logger.error(f"Bot crashed: {e}, retrying in 30s")
+                time.sleep(30)
+
+    threading.Thread(target=_run_with_retry, daemon=True).start()
     logger.info("Telegram bot started")
