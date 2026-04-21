@@ -1,5 +1,6 @@
 # src/meteomat/app.py
 import json
+import os
 import streamlit as st
 import folium, requests
 from importlib.metadata import version
@@ -8,6 +9,9 @@ from meteomat.datasets.open_meteo import fetch_ensemble_forecast
 from meteomat.viz.charts import create_weather_dashboard, fig_to_streamlit_html  
 from meteomat.cfg.config import LANG
 
+if os.environ.get("TELEGRAM_BOT_TOKEN"):
+    from meteomat.bot import start_bot_thread
+    start_bot_thread()
 
 query_params = st.query_params
 default_lang = query_params.get("lang", "en")
