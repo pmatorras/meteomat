@@ -9,7 +9,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Deploy to Hugging Face
+      - name: Deploy to Hugging Face (backup)
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
