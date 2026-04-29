@@ -1,4 +1,4 @@
-name: Deploy Dashboard to HF Space
+name: Deploy Dashboard to HF Space (Backup)
 
 on:
   workflow_dispatch:
