@@ -5,8 +5,8 @@ import streamlit as st
 import folium, requests
 from importlib.metadata import version
 from streamlit_folium import st_folium
-from meteomat.datasets.open_meteo import fetch_ensemble_forecast
-from meteomat.viz.charts import create_weather_dashboard, fig_to_streamlit_html  
+from meteomat.datasets.open_meteo import fetch_ensemble_forecast, fetch_marine_forecast
+from meteomat.viz.charts import create_weather_dashboard, create_marine_dashboard, fig_to_streamlit_html
 from meteomat.cfg.config import LANG
 
 if os.environ.get("TELEGRAM_BOT_TOKEN"):
@@ -77,6 +77,15 @@ if (default_lat is None or default_lon is None) and default_name:
 
 # helper to notify parent iframe of current state
 
+def _fetch_both(location, location_info, lang):
+    forecast_data = fetch_ensemble_forecast(location=location)
+    st.session_state.forecast_fig = create_weather_dashboard(forecast_data, location_info, lang=lang)
+    marine_data = fetch_marine_forecast(location=location)
+    st.session_state.marine_fig = (
+        create_marine_dashboard(marine_data, forecast_data, location_info, lang=lang) if marine_data else None
+    )
+
+
 def notify_parent(lat, lon, lang_code, name=""):
     payload = json.dumps({"lat": lat, "lon": lon, "lang": lang_code, "name": name})
     st.html(f"""
@@ -100,9 +109,8 @@ if lang_code != default_lang:
     if st.session_state.last_location and st.session_state.forecast_fig:
         lat, lon = st.session_state.last_location
         location = {"Name": st.session_state.location_name or "", "lat": lat, "lon": lon}
-        forecast_data = fetch_ensemble_forecast(location=location)
         location_info = {"name": st.session_state.location_name or f"{lat:.2f}°N, {lon:.2f}°E"}
-        st.session_state.forecast_fig = create_weather_dashboard(forecast_data, location_info, lang=lang_code)
+        _fetch_both(location, location_info, lang_code)
     st.rerun()
 
 t = LANG[lang_code]
@@ -114,6 +122,8 @@ if 'last_location' not in st.session_state:
     st.session_state.last_location = (default_lat, default_lon) if default_lat and default_lon else None
 if 'forecast_fig' not in st.session_state:
     st.session_state.forecast_fig = None
+if 'marine_fig' not in st.session_state:
+    st.session_state.marine_fig = None
 if 'map_center' not in st.session_state:
     st.session_state.map_center = [default_lat, default_lon] if default_lat and default_lon else [45.0, 0.0]
 if 'map_zoom' not in st.session_state:
@@ -125,9 +135,8 @@ if 'location_name' not in st.session_state:
 if default_lat and default_lon and st.session_state.forecast_fig is None:
     with st.spinner("Fetching forecast..."):
         location = {"Name": default_name or "", "lat": default_lat, "lon": default_lon}
-        forecast_data = fetch_ensemble_forecast(location=location)
         location_info = {"name": default_name or f"{default_lat:.2f}°N, {default_lon:.2f}°E"}
-        st.session_state.forecast_fig = create_weather_dashboard(forecast_data, location_info, lang=lang_code)
+        _fetch_both(location, location_info, lang_code)
 
 # Create placeholder for forecast at the top
 forecast_container = st.container()
@@ -153,9 +162,8 @@ if search_query and len(search_query) > 2:
             st.query_params["name"] = name.split(',')[0]
             with st.spinner("Fetching forecast..."):
                 location = {"Name": search_query, "lat": lat, "lon": lon}
-                forecast_data = fetch_ensemble_forecast(location=location)
                 location_info = {'name': name.split(',')[0]}
-                st.session_state.forecast_fig = create_weather_dashboard(forecast_data, location_info, lang=lang_code)
+                _fetch_both(location, location_info, lang_code)
 
 # Map
 st.markdown("---")
@@ -190,15 +198,10 @@ if map_data and map_data.get('last_clicked'):
             del st.query_params["name"]
 
         display_name = place_name or f'{lat:.2f}°N, {lon:.2f}°E'
-        with st.spinner("Fetching ensemble forecast..."):
+        with st.spinner("Fetching forecast..."):
             location = {"Name": place_name or "", "lat": lat, "lon": lon}
-            forecast_data = fetch_ensemble_forecast(location=location)
             location_info = {'name': display_name}
-            st.session_state.forecast_fig = create_weather_dashboard(
-                forecast_data,
-                location_info,
-                lang=lang_code
-            )
+            _fetch_both(location, location_info, lang_code)
 
 # Display cached forecast
 if st.session_state.forecast_fig is not None:
@@ -208,9 +211,18 @@ if st.session_state.forecast_fig is not None:
             st.markdown(f"## 📍 {st.session_state.location_name} ({lat:.2f}°N, {lon:.2f}°E)")
         else:
             st.markdown(f"## 📍 {lat:.2f}°N, {lon:.2f}°E")
-        html = fig_to_streamlit_html(st.session_state.forecast_fig, lang=lang_code)
-        html = html.replace("<head>", "<head><style>html,body{overflow:hidden}</style>", 1)
-        st.iframe(html, height=1000)
+        tab_weather, tab_sea = st.tabs([t["tab_weather"], t["tab_sea"]])
+        with tab_weather:
+            html = fig_to_streamlit_html(st.session_state.forecast_fig, lang=lang_code)
+            html = html.replace("<head>", "<head><style>html,body{overflow:hidden}</style>", 1)
+            st.iframe(html, height=1000)
+        with tab_sea:
+            if st.session_state.marine_fig:
+                html = fig_to_streamlit_html(st.session_state.marine_fig, lang=lang_code)
+                html = html.replace("<head>", "<head><style>html,body{overflow:hidden}</style>", 1)
+                st.iframe(html, height=1000)
+            else:
+                st.info(t["no_sea_data"])
         st.markdown("---")
 
 # Notify parent iframe of current state (for meteo.matorras.com address bar)

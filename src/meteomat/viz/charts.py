@@ -181,10 +181,11 @@ def create_marine_dashboard(data: dict, weather_data: dict, location: dict | Non
         tickformatstops=tick_stops,
         tickformat="%b %d",
     )
-    fig.update_yaxes(title_text="m", row=1, col=1, autorange=True, autorangeoptions=dict(minallowed=0))
-    fig.update_yaxes(title_text="s", row=2, col=1, autorange=True, autorangeoptions=dict(minallowed=0))
+
+    fig.update_yaxes(title_text="m",    row=1, col=1, autorange=True, autorangeoptions=dict(minallowed=0))
+    fig.update_yaxes(title_text="s",    row=2, col=1, autorange=True, autorangeoptions=dict(minallowed=0))
     fig.update_yaxes(title_text="km/h", row=3, col=1, autorange=True, autorangeoptions=dict(minallowed=0))
-    fig.update_yaxes(title_text="°C", row=4, col=1, autorange=True)
+    fig.update_yaxes(title_text="°C",   row=4, col=1, autorange=True)
 
     fig.update_layout(
         height=1000,
@@ -370,10 +371,6 @@ def create_weather_dashboard(data, location=None, add_title=None, lang = "en"):
         ],
         tickformat="%b %d"  # Default format for full view
     )
-    fig.update_xaxes(title_text="", row=1, col=1)
-    fig.update_xaxes(title_text="", row=2, col=1)
-    fig.update_xaxes(title_text="", row=3, col=1)
-    fig.update_xaxes(title_text="", row=4, col=1)
     
     fig.update_yaxes(title_text="°C", row=1, col=1)
     
