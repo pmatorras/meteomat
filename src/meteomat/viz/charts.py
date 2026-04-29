@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import plotly.graph_objects as go
 import plotly.io as pio
 from plotly.subplots import make_subplots
@@ -44,7 +45,7 @@ def direction_to_arrow(deg):
 
 
 def create_marine_dashboard(data: dict, weather_data: dict, location: dict | None = None, lang: str = "en") -> go.Figure:
-    """3-panel marine chart: wave height (+ direction arrows), wave period, wind."""
+    """4-panel marine chart: wave height (+ direction arrows), wave period, wind, SST."""
     from meteomat.cfg.config import LANG
     t = LANG[lang]
 
@@ -52,45 +53,40 @@ def create_marine_dashboard(data: dict, weather_data: dict, location: dict | Non
     wdates = weather_data["dates"]
 
     fig = make_subplots(
-        rows=3, cols=1,
-        subplot_titles=(t["wave_height"], t["wave_period"], t["wind"]),
-        vertical_spacing=0.12,
-        row_heights=[0.38, 0.28, 0.34],
+        rows=4, cols=1,
+        subplot_titles=(t["wave_height"], t["wave_period"], t["wind"], t["sea_surface_temperature"]),
+        vertical_spacing=0.10,
+        row_heights=[0.25, 0.25, 0.25, 0.25],
     )
 
     # === WAVE HEIGHT ===
+    wave_dir_text = [
+        f"{direction_to_cardinal(d)} ({d:.0f}°)" if not np.isnan(d) else "N/A"
+        for d in data["wave_direction"]
+    ]
+    swell_dir_text = [
+        f"{direction_to_cardinal(d)} ({d:.0f}°)" if not np.isnan(d) else "N/A"
+        for d in data["swell_wave_direction"]
+    ]
     fig.add_trace(go.Scatter(
         x=dates, y=data["wave_height"],
         line=dict(width=3, color="rgb(0, 119, 190)"),
         showlegend=False, name="Total",
-        hovertemplate="<b>Total:</b> %{y:.2f} m<extra></extra>",
+        text=wave_dir_text,
+        hovertemplate="<b>Total:</b> %{y:.2f} m (%{text})<extra></extra>",
     ), row=1, col=1)
     fig.add_trace(go.Scatter(
         x=dates, y=data["swell_wave_height"],
         line=dict(width=2, color="rgb(0, 180, 216)"),
         showlegend=False, name="Swell",
-        hovertemplate="<b>Swell:</b> %{y:.2f} m<extra></extra>",
+        text=swell_dir_text,
+        hovertemplate="<b>Swell:</b> %{y:.2f} m (%{text})<extra></extra>",
     ), row=1, col=1)
     fig.add_trace(go.Scatter(
         x=dates, y=data["wind_wave_height"],
         line=dict(width=2, color="rgba(144, 224, 239, 0.85)"),
         showlegend=False, name="Wind wave",
         hovertemplate="<b>Wind wave:</b> %{y:.2f} m<extra></extra>",
-    ), row=1, col=1)
-
-    # Wave direction: invisible hover trace + arrows pinned to top of row 1
-    fig.add_trace(go.Scatter(
-        x=dates,
-        y=data["wave_height"],
-        mode="markers",
-        marker=dict(opacity=0, size=1),
-        showlegend=False,
-        text=[
-            f"{direction_to_cardinal(d)} ({d:.0f}°)" if not np.isnan(d) else "N/A"
-            for d in data["wave_direction"]
-        ],
-        hovertemplate="<b>Wave dir:</b> %{text}<extra></extra>",
-        name="",
     ), row=1, col=1)
 
     arrow_interval = max(1, len(dates) // 12)
@@ -117,7 +113,8 @@ def create_marine_dashboard(data: dict, weather_data: dict, location: dict | Non
         x=dates, y=data["swell_wave_period"],
         line=dict(width=2, color="rgb(144, 190, 109)", dash="dot"),
         showlegend=False, name="Swell period",
-        hovertemplate="<b>Swell period:</b> %{y:.1f} s<extra></extra>",
+        text=swell_dir_text,
+        hovertemplate="<b>Swell period:</b> %{y:.1f} s (%{text})<extra></extra>",
     ), row=2, col=1)
 
     # === WIND (from weather_data) ===
@@ -162,6 +159,15 @@ def create_marine_dashboard(data: dict, weather_data: dict, location: dict | Non
             xanchor="center", yanchor="top",
         )
 
+    # === SEA SURFACE TEMPERATURE ===
+    sst_smooth = pd.Series(data["sea_surface_temperature"]).rolling(window=3, center=True, min_periods=1).mean().values
+    fig.add_trace(go.Scatter(
+        x=dates, y=sst_smooth,
+        line=dict(width=2, color="rgb(255, 160, 86)"),
+        showlegend=False, name="SST",
+        hovertemplate="<b>SST:</b> %{y:.1f}°C<extra></extra>",
+    ), row=4, col=1)
+
     # Axes
     tick_stops = [
         dict(dtickrange=[None, 86400000], value="%H:%M"),
@@ -178,9 +184,10 @@ def create_marine_dashboard(data: dict, weather_data: dict, location: dict | Non
     fig.update_yaxes(title_text="m", row=1, col=1, autorange=True, autorangeoptions=dict(minallowed=0))
     fig.update_yaxes(title_text="s", row=2, col=1, autorange=True, autorangeoptions=dict(minallowed=0))
     fig.update_yaxes(title_text="km/h", row=3, col=1, autorange=True, autorangeoptions=dict(minallowed=0))
+    fig.update_yaxes(title_text="°C", row=4, col=1, autorange=True)
 
     fig.update_layout(
-        height=750,
+        height=1000,
         showlegend=False,
         hovermode="x unified",
         paper_bgcolor="rgba(0,0,0,0)",

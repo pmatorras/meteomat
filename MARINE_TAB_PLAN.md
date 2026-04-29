@@ -34,11 +34,12 @@ Add to both `"en"` and `"es"` dicts in `LANG`:
 ```python
 "tab_weather":    "🌤️ Weather"   / "🌤️ Tiempo"
 "tab_sea":        "🌊 Sea"       / "🌊 Mar"
-"wave_height":    "Wave Height"  / "Altura de Ola"
-"wave_period":    "Wave Period"  / "Período de Ola"
-"wave_direction": "Wave Direction" / "Dirección de Ola"
-"no_sea_data":    "No sea data available for this location. The marine forecast only covers coastal and offshore areas."
-                / "No hay datos marítimos disponibles para esta ubicación. El pronóstico marino solo cubre zonas costeras y mar abierto."
+"wave_height":             "Wave Height"  / "Altura de Ola"
+"wave_period":             "Wave Period"  / "Período de Ola"
+"wave_direction":          "Wave Direction" / "Dirección de Ola"
+"sea_surface_temperature": "Sea Surface Temp" / "Temp. Superficial del Mar"
+"no_sea_data":             "No sea data available for this location. The marine forecast only covers coastal and offshore areas."
+                         / "No hay datos marítimos disponibles para esta ubicación. El pronóstico marino solo cubre zonas costeras y mar abierto."
 ```
 
 ---
@@ -51,7 +52,7 @@ def fetch_marine_forecast(location: dict) -> dict | None:
 
 - **Endpoint:** `https://marine-api.open-meteo.com/v1/marine`
 - **Params:** `latitude`, `longitude`, `forecast_days=7`,
-  `hourly="wave_height,wave_direction,wave_period,swell_wave_height,swell_wave_direction,swell_wave_period,wind_wave_height,wind_wave_direction,wind_wave_period"`
+  `hourly="wave_height,wave_direction,wave_period,swell_wave_height,swell_wave_direction,swell_wave_period,wind_wave_height,wind_wave_direction,wind_wave_period,sea_surface_temperature"`
 - **Returns `None`** for inland locations (API returns HTTP 400) or on any exception.
 - Convert API `null` values → `np.nan` before building arrays.
 
@@ -68,6 +69,7 @@ def fetch_marine_forecast(location: dict) -> dict | None:
   "wind_wave_height":     np.ndarray,  # m
   "wind_wave_period":     np.ndarray,  # s
   "wind_wave_direction":  np.ndarray,  # °
+  "sea_surface_temperature": np.ndarray,  # °C
 }
 ```
 
@@ -81,35 +83,35 @@ def create_marine_dashboard(data: dict, weather_data: dict, location: dict | Non
 
 `weather_data` is the existing ensemble forecast dict — reused to show wind without an extra API call.
 
-**Layout:** `make_subplots(rows=3, cols=1, row_heights=[0.38, 0.28, 0.34], vertical_spacing=0.12)`
+**Layout:** `make_subplots(rows=4, cols=1, row_heights=[0.25, 0.25, 0.25, 0.25], vertical_spacing=0.10)`
 
 ### Row 1 — Wave Height (m) + Wave Direction arrows overlaid
-| Trace | Color | Width |
-|-------|-------|-------|
-| Total | `rgb(0, 119, 190)` | 3 solid |
-| Swell | `rgb(0, 180, 216)` | 2 solid |
-| Wind wave | `rgba(144, 224, 239, 0.85)` | 2 solid |
+| Trace | Color | Width | Hover |
+|-------|-------|-------|-------|
+| Total | `rgb(0, 119, 190)` | 3 solid | height + total wave direction |
+| Swell | `rgb(0, 180, 216)` | 2 solid | height + swell direction |
+| Wind wave | `rgba(144, 224, 239, 0.85)` | 2 solid | height only |
 
-Wave direction arrows pinned to top of panel: `xref="x1"`, `yref="y1 domain"`, `y=0.97` — same pattern as wind direction in the weather chart. Color `rgb(0, 80, 140)`.
-
-Add one invisible scatter trace (opacity=0) for unified hover: `hovertemplate="<b>Dir:</b> %{text}<extra></extra>"`.
+Wave direction arrows pinned to top of panel: `xref="x"`, `yref="y domain"`, `y=0.97`, color `rgb(0, 80, 140)`.
+Direction baked into hover text of each trace (same pattern as wind in weather chart) — no invisible trace needed.
 
 Y-axis: `"m"`, `autorangeoptions=dict(minallowed=0)`
 
 ### Row 2 — Wave Period (s)
-| Trace | Color | Style |
-|-------|-------|-------|
-| Total period | `rgb(72, 149, 239)` | solid |
-| Swell period | `rgb(144, 190, 109)` | dotted |
+| Trace | Color | Style | Hover |
+|-------|-------|-------|-------|
+| Total period | `rgb(72, 149, 239)` | solid | period only |
+| Swell period | `rgb(144, 190, 109)` | dotted | period + swell direction |
 
 Y-axis: `"s"`, `autorangeoptions=dict(minallowed=0)`
 
 ### Row 3 — Wind (km/h) + Wind Direction arrows overlaid
-Uses `weather_data["wind_median"]`, `weather_data["wind_gusts"]`, `weather_data["wind_direction"]`.
-Dates from `weather_data["dates"]` — trim or interpolate to match marine date range if needed.
+Uses `weather_data["wind_median"]`, `weather_data["wind_gusts"]`, `weather_data["wind_direction"]`, `weather_data["wind_10th"]`, `weather_data["wind_90th"]`.
+Dates from `weather_data["dates"]`.
 
 | Trace | Color | Style |
 |-------|-------|-------|
+| Ensemble band (10th–90th) | `rgba(0, 204, 150, 0.15)` | fill |
 | Wind median | `rgb(0, 204, 150)` | 2 solid |
 | Wind gusts | `rgb(0, 150, 100)` | 2 dotted |
 
@@ -117,7 +119,16 @@ Wind direction arrows: `xref="x3"`, `yref="y3 domain"`, `y=0.97`, color `rgb(0, 
 
 Y-axis: `"km/h"`, `autorangeoptions=dict(minallowed=0)`
 
-**Figure settings:** `height=750`, transparent bg, `hovermode="x unified"`, same x-axis `tickformatstops` as weather chart.
+### Row 4 — Sea Surface Temperature (°C)
+| Trace | Color | Style |
+|-------|-------|-------|
+| SST | `rgb(255, 160, 86)` | 2 solid |
+
+SST is quantized to 0.1°C by the model, producing a staircase. Apply a 3h centered rolling mean (`window=3, center=True, min_periods=1`) before plotting to smooth quantization steps without distorting the real trend.
+
+Y-axis: `"°C"`, `autorange=True`
+
+**Figure settings:** `height=1000`, transparent bg, `hovermode="x unified"`, same x-axis `tickformatstops` as weather chart.
 
 ---
 

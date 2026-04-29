@@ -14,7 +14,8 @@ def fetch_marine_forecast(location: dict) -> dict | None:
         "hourly": (
             "wave_height,wave_direction,wave_period,"
             "swell_wave_height,swell_wave_direction,swell_wave_period,"
-            "wind_wave_height,wind_wave_direction,wind_wave_period"
+            "wind_wave_height,wind_wave_direction,wind_wave_period,"
+            "sea_surface_temperature"
         ),
         "forecast_days": 7,
     }
@@ -39,6 +40,7 @@ def fetch_marine_forecast(location: dict) -> dict | None:
         "wave_height", "wave_direction", "wave_period",
         "swell_wave_height", "swell_wave_direction", "swell_wave_period",
         "wind_wave_height", "wind_wave_direction", "wind_wave_period",
+        "sea_surface_temperature",
     ]
     result = {"dates": times}
     for k in keys:
