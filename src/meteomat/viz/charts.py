@@ -43,6 +43,153 @@ def direction_to_arrow(deg):
     return arrows[idx]
 
 
+def create_marine_dashboard(data: dict, weather_data: dict, location: dict | None = None, lang: str = "en") -> go.Figure:
+    """3-panel marine chart: wave height (+ direction arrows), wave period, wind."""
+    from meteomat.cfg.config import LANG
+    t = LANG[lang]
+
+    dates = data["dates"]
+    wdates = weather_data["dates"]
+
+    fig = make_subplots(
+        rows=3, cols=1,
+        subplot_titles=(t["wave_height"], t["wave_period"], t["wind"]),
+        vertical_spacing=0.12,
+        row_heights=[0.38, 0.28, 0.34],
+    )
+
+    # === WAVE HEIGHT ===
+    fig.add_trace(go.Scatter(
+        x=dates, y=data["wave_height"],
+        line=dict(width=3, color="rgb(0, 119, 190)"),
+        showlegend=False, name="Total",
+        hovertemplate="<b>Total:</b> %{y:.2f} m<extra></extra>",
+    ), row=1, col=1)
+    fig.add_trace(go.Scatter(
+        x=dates, y=data["swell_wave_height"],
+        line=dict(width=2, color="rgb(0, 180, 216)"),
+        showlegend=False, name="Swell",
+        hovertemplate="<b>Swell:</b> %{y:.2f} m<extra></extra>",
+    ), row=1, col=1)
+    fig.add_trace(go.Scatter(
+        x=dates, y=data["wind_wave_height"],
+        line=dict(width=2, color="rgba(144, 224, 239, 0.85)"),
+        showlegend=False, name="Wind wave",
+        hovertemplate="<b>Wind wave:</b> %{y:.2f} m<extra></extra>",
+    ), row=1, col=1)
+
+    # Wave direction: invisible hover trace + arrows pinned to top of row 1
+    fig.add_trace(go.Scatter(
+        x=dates,
+        y=data["wave_height"],
+        mode="markers",
+        marker=dict(opacity=0, size=1),
+        showlegend=False,
+        text=[
+            f"{direction_to_cardinal(d)} ({d:.0f}°)" if not np.isnan(d) else "N/A"
+            for d in data["wave_direction"]
+        ],
+        hovertemplate="<b>Wave dir:</b> %{text}<extra></extra>",
+        name="",
+    ), row=1, col=1)
+
+    arrow_interval = max(1, len(dates) // 12)
+    for i in range(0, len(dates), arrow_interval):
+        if np.isnan(data["wave_direction"][i]):
+            continue
+        fig.add_annotation(
+            x=dates[i], y=0.97,
+            text=direction_to_arrow(data["wave_direction"][i]),
+            showarrow=False,
+            font=dict(size=16, color="rgb(0, 80, 140)"),
+            xref="x", yref="y domain",
+            xanchor="center", yanchor="top",
+        )
+
+    # === WAVE PERIOD ===
+    fig.add_trace(go.Scatter(
+        x=dates, y=data["wave_period"],
+        line=dict(width=2, color="rgb(72, 149, 239)"),
+        showlegend=False, name="Period",
+        hovertemplate="<b>Period:</b> %{y:.1f} s<extra></extra>",
+    ), row=2, col=1)
+    fig.add_trace(go.Scatter(
+        x=dates, y=data["swell_wave_period"],
+        line=dict(width=2, color="rgb(144, 190, 109)", dash="dot"),
+        showlegend=False, name="Swell period",
+        hovertemplate="<b>Swell period:</b> %{y:.1f} s<extra></extra>",
+    ), row=2, col=1)
+
+    # === WIND (from weather_data) ===
+    fig.add_trace(go.Scatter(
+        x=wdates, y=weather_data["wind_90th"],
+        fill=None, line=dict(width=0),
+        showlegend=False, hoverinfo="skip",
+    ), row=3, col=1)
+    fig.add_trace(go.Scatter(
+        x=wdates, y=weather_data["wind_10th"],
+        fill="tonexty", fillcolor="rgba(0, 204, 150, 0.15)",
+        line=dict(width=0),
+        showlegend=False, hoverinfo="skip",
+    ), row=3, col=1)
+
+    wind_hover = [
+        f"{direction_to_cardinal(d)} ({d:.0f}°)" for d in weather_data["wind_direction"]
+    ]
+    fig.add_trace(go.Scatter(
+        x=wdates, y=weather_data["wind_median"],
+        line=dict(width=2, color="rgb(0, 204, 150)"),
+        showlegend=False, name="Wind",
+        text=wind_hover,
+        hovertemplate="<b>Wind:</b> %{y:.0f} km/h (%{text})<extra></extra>",
+    ), row=3, col=1)
+    fig.add_trace(go.Scatter(
+        x=wdates, y=weather_data["wind_gusts"],
+        line=dict(width=2, color="rgb(0, 150, 100)", dash="dot"),
+        showlegend=False, name="Gusts",
+        text=wind_hover,
+        hovertemplate="<b>Gusts:</b> %{y:.0f} km/h (%{text})<extra></extra>",
+    ), row=3, col=1)
+
+    wind_arrow_interval = max(1, len(wdates) // 12)
+    for i in range(0, len(wdates), wind_arrow_interval):
+        fig.add_annotation(
+            x=wdates[i], y=0.97,
+            text=direction_to_arrow(weather_data["wind_direction"][i]),
+            showarrow=False,
+            font=dict(size=16, color="rgb(0, 120, 90)"),
+            xref="x3", yref="y3 domain",
+            xanchor="center", yanchor="top",
+        )
+
+    # Axes
+    tick_stops = [
+        dict(dtickrange=[None, 86400000], value="%H:%M"),
+        dict(dtickrange=[86400000, 604800000], value="%b %d %H:%M"),
+        dict(dtickrange=[604800000, None], value="%b %d"),
+    ]
+    fig.update_xaxes(
+        hoverformat="%b %d, %H:%M",
+        matches="x",
+        range=[dates[0], dates[-1]],
+        tickformatstops=tick_stops,
+        tickformat="%b %d",
+    )
+    fig.update_yaxes(title_text="m", row=1, col=1, autorange=True, autorangeoptions=dict(minallowed=0))
+    fig.update_yaxes(title_text="s", row=2, col=1, autorange=True, autorangeoptions=dict(minallowed=0))
+    fig.update_yaxes(title_text="km/h", row=3, col=1, autorange=True, autorangeoptions=dict(minallowed=0))
+
+    fig.update_layout(
+        height=750,
+        showlegend=False,
+        hovermode="x unified",
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        margin=dict(l=50, r=20, t=40, b=65),
+    )
+    return fig
+
+
 def create_weather_dashboard(data, location=None, add_title=None, lang = "en"):
     """Create visualization with improved rainfall scale"""
     print("\n📊 Creating weather dashboard...")

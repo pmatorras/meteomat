@@ -3,6 +3,51 @@ import pandas as pd
 import numpy as np
 
 
+def fetch_marine_forecast(location: dict) -> dict | None:
+    """Open-Meteo Marine API — deterministic 7-day hourly sea forecast."""
+    print("🌊 Fetching marine forecast from Open-Meteo Marine API...")
+
+    url = "https://marine-api.open-meteo.com/v1/marine"
+    params = {
+        "latitude": location["lat"],
+        "longitude": location["lon"],
+        "hourly": (
+            "wave_height,wave_direction,wave_period,"
+            "swell_wave_height,swell_wave_direction,swell_wave_period,"
+            "wind_wave_height,wind_wave_direction,wind_wave_period"
+        ),
+        "forecast_days": 7,
+    }
+
+    try:
+        response = requests.get(url, params=params, timeout=10)
+        if not response.ok:
+            print(f"  ⚠️  Marine API returned {response.status_code} — no data for this location")
+            return None
+        data = response.json()
+    except Exception as e:
+        print(f"  ⚠️  Marine API request failed: {e}")
+        return None
+
+    hourly = data["hourly"]
+    times = pd.to_datetime(hourly["time"])
+
+    def to_array(key):
+        return np.array([v if v is not None else float("nan") for v in hourly[key]], dtype=float)
+
+    keys = [
+        "wave_height", "wave_direction", "wave_period",
+        "swell_wave_height", "swell_wave_direction", "swell_wave_period",
+        "wind_wave_height", "wind_wave_direction", "wind_wave_period",
+    ]
+    result = {"dates": times}
+    for k in keys:
+        result[k] = to_array(k)
+
+    print(f"  ✓ {len(times)} timesteps, wave height range: {np.nanmin(result['wave_height']):.2f}–{np.nanmax(result['wave_height']):.2f} m")
+    return result
+
+
 
 def fetch_ensemble_forecast(location=None):
     """
