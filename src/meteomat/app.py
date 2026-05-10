@@ -5,7 +5,7 @@ import streamlit as st
 import folium, requests
 from importlib.metadata import version
 from streamlit_folium import st_folium
-from meteomat.datasets.open_meteo import fetch_ensemble_forecast, fetch_marine_forecast
+from meteomat.datasets.open_meteo import fetch_forecast, fetch_marine_forecast
 from meteomat.viz.charts import create_weather_dashboard, create_marine_dashboard, fig_to_streamlit_html
 from meteomat.cfg.config import LANG
 
@@ -78,7 +78,7 @@ if (default_lat is None or default_lon is None) and default_name:
 # helper to notify parent iframe of current state
 
 def _fetch_both(location, location_info, lang):
-    forecast_data = fetch_ensemble_forecast(location=location)
+    forecast_data = fetch_forecast(location=location)
     st.session_state.forecast_fig = create_weather_dashboard(forecast_data, location_info, lang=lang)
     marine_data = fetch_marine_forecast(location=location)
     st.session_state.marine_fig = (
@@ -215,12 +215,12 @@ if st.session_state.forecast_fig is not None:
         with tab_weather:
             html = fig_to_streamlit_html(st.session_state.forecast_fig, lang=lang_code)
             html = html.replace("<head>", "<head><style>html,body{overflow:hidden}</style>", 1)
-            st.iframe(html, height=1000)
+            st.components.v1.html(html, height=1000)
         with tab_sea:
             if st.session_state.marine_fig:
                 html = fig_to_streamlit_html(st.session_state.marine_fig, lang=lang_code)
                 html = html.replace("<head>", "<head><style>html,body{overflow:hidden}</style>", 1)
-                st.iframe(html, height=1000)
+                st.components.v1.html(html, height=1000)
             else:
                 st.info(t["no_sea_data"])
         st.markdown("---")

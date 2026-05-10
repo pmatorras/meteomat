@@ -217,9 +217,10 @@ def create_weather_dashboard(data, location=None, add_title=None, lang = "en"):
         rain_hover_text.append(f"{data['rain_probability'][i]:.0f}%")
     
     # RAINFALL TRANSFORMATION: Square root scale for better visibility
-    rain_10th_sqrt = np.sqrt(data['rain_10th'])
-    rain_median_sqrt = np.sqrt(data['rain_median'])
-    rain_90th_sqrt = np.sqrt(data['rain_90th'])
+    # Round to 0.1mm — sub-0.1mm precision is below our detection threshold
+    rain_10th_sqrt = np.sqrt(np.round(data['rain_10th'], 1))
+    rain_median_sqrt = np.sqrt(np.round(data['rain_median'], 1))
+    rain_90th_sqrt = np.sqrt(np.round(data['rain_90th'], 1))
     
     fig = make_subplots(
         rows=4, cols=1,
@@ -282,9 +283,9 @@ def create_weather_dashboard(data, location=None, add_title=None, lang = "en"):
         line=dict(width=2, color='rgb(99, 110, 250)', shape='hv'),  # shape='hv' makes it stepped!
         showlegend=False,
         name='Rainfall',
-        customdata=data['rain_median'],
+        customdata=np.round(data['rain_median'], 1),
         text=rain_hover_text,
-        hovertemplate='<b>Rain:</b> %{customdata:.2f} mm (Prob: %{text})<extra></extra>',
+        hovertemplate='<b>Rain:</b> %{customdata:.1f} mm (Prob: %{text})<extra></extra>',
         connectgaps=False,
         mode='lines'
     ), row=2, col=1)
