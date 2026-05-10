@@ -101,7 +101,7 @@ def fetch_ensemble_forecast(location=None):
     wind_dir = np.array(hourly.get('wind_direction_10m', [0] * len(times)))
     
     # Calculate probability of rain (% of members with precip > 0.1 mm)
-    rain_probability = (np.sum(precip_array > 0.1, axis=0) / precip_array.shape[0]) * 100
+    rain_probability = (np.sum(precip_array > 0.0, axis=0) / precip_array.shape[0]) * 100
     
     results = {
         'dates': times,
