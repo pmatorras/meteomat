@@ -46,6 +46,10 @@ def fetch_marine_forecast(location: dict) -> dict | None:
     for k in keys:
         result[k] = to_array(k)
 
+    if np.all(np.isnan(result['wave_height'])):
+        print("  ⚠️  All wave data is NaN — inland or unsupported location")
+        return None
+
     print(f"  ✓ {len(times)} timesteps, wave height range: {np.nanmin(result['wave_height']):.2f}–{np.nanmax(result['wave_height']):.2f} m")
     return result
 

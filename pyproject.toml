@@ -18,6 +18,8 @@ dependencies = [
     "streamlit-folium",
     "python-telegram-bot>=20.0",
     "kaleido",
+    "shapely",
+    "pyproj",
 ]
 [project.optional-dependencies]
 train = [ 
