@@ -5,7 +5,8 @@ import streamlit as st
 import folium, requests
 from importlib.metadata import version
 from streamlit_folium import st_folium
-from meteomat.datasets.open_meteo import fetch_ensemble_forecast, fetch_marine_forecast
+from meteomat.datasets.open_meteo import fetch_forecast, fetch_marine_forecast
+from meteomat.datasets.geo import is_coastal
 from meteomat.viz.charts import create_weather_dashboard, create_marine_dashboard, fig_to_streamlit_html
 from meteomat.cfg.config import LANG
 
@@ -78,12 +79,15 @@ if (default_lat is None or default_lon is None) and default_name:
 # helper to notify parent iframe of current state
 
 def _fetch_both(location, location_info, lang):
-    forecast_data = fetch_ensemble_forecast(location=location)
+    forecast_data = fetch_forecast(location=location)
     st.session_state.forecast_fig = create_weather_dashboard(forecast_data, location_info, lang=lang)
-    marine_data = fetch_marine_forecast(location=location)
-    st.session_state.marine_fig = (
-        create_marine_dashboard(marine_data, forecast_data, location_info, lang=lang) if marine_data else None
-    )
+    if is_coastal(location['lat'], location['lon']):
+        marine_data = fetch_marine_forecast(location=location)
+        st.session_state.marine_fig = (
+            create_marine_dashboard(marine_data, forecast_data, location_info, lang=lang) if marine_data else None
+        )
+    else:
+        st.session_state.marine_fig = None
 
 
 def notify_parent(lat, lon, lang_code, name=""):
@@ -211,18 +215,19 @@ if st.session_state.forecast_fig is not None:
             st.markdown(f"## 📍 {st.session_state.location_name} ({lat:.2f}°N, {lon:.2f}°E)")
         else:
             st.markdown(f"## 📍 {lat:.2f}°N, {lon:.2f}°E")
-        tab_weather, tab_sea = st.tabs([t["tab_weather"], t["tab_sea"]])
+        if st.session_state.marine_fig:
+            tab_weather, tab_sea = st.tabs([t["tab_weather"], t["tab_sea"]])
+        else:
+            tab_weather, = st.tabs([t["tab_weather"]])
         with tab_weather:
             html = fig_to_streamlit_html(st.session_state.forecast_fig, lang=lang_code)
             html = html.replace("<head>", "<head><style>html,body{overflow:hidden}</style>", 1)
-            st.iframe(html, height=1000)
-        with tab_sea:
-            if st.session_state.marine_fig:
+            st.components.v1.html(html, height=1000)
+        if st.session_state.marine_fig:
+            with tab_sea:
                 html = fig_to_streamlit_html(st.session_state.marine_fig, lang=lang_code)
                 html = html.replace("<head>", "<head><style>html,body{overflow:hidden}</style>", 1)
-                st.iframe(html, height=1000)
-            else:
-                st.info(t["no_sea_data"])
+                st.components.v1.html(html, height=1000)
         st.markdown("---")
 
 # Notify parent iframe of current state (for meteo.matorras.com address bar)
