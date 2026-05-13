@@ -1,0 +1,54 @@
+{
+  "description": "Meteomat shows probabilistic weather forecasts anywhere in the world. Instead of a single number, it shows a range of likely outcomes so you can see not just what is most likely, but how confident the forecast is.",
+  "sources": [
+    {
+      "product": "ECMWF IFS Ensemble (EPS)",
+      "resolution_km": 18,
+      "members": 51,
+      "horizon_days": 7,
+      "type": "weather"
+    },
+    {
+      "product": "ECMWF IFS HRES",
+      "resolution_km": 9,
+      "members": 1,
+      "horizon_days": 7,
+      "type": "weather"
+    },
+    {
+      "product": "ECMWF Wave Model",
+      "resolution_km": 28,
+      "members": null,
+      "horizon_days": 7,
+      "type": "marine"
+    }
+  ],
+  "parameters": {
+    "uncertainty_band_pct": { "low": 10, "high": 90 },
+    "rain_threshold_mm": 0.1,
+    "rain_blend_hres_rain": { "ensemble": 0.5, "hres": 0.5 },
+    "rain_blend_hres_no_rain": { "ensemble": 0.75, "hres": 0.25 }
+  },
+  "limitations": [
+    {
+      "id": "spatial_resolution",
+      "title": "Spatial resolution",
+      "body": "HRES at ~9 km and the ensemble at ~18 km cannot resolve sub-grid features such as valley-scale orography, urban heat islands, or small coastal inlets. Two nearby locations within the same grid cell will receive nearly identical forecasts."
+    },
+    {
+      "id": "ensemble_calibration",
+      "title": "Ensemble calibration",
+      "body": "The ECMWF ensemble is one of the best-calibrated probabilistic forecast systems in the world, but calibration is not perfect. Stated probabilities are skill estimates, not guarantees."
+    },
+    {
+      "id": "rainfall_uncertainty",
+      "title": "Rainfall uncertainty",
+      "body": "Precipitation is the hardest variable to forecast deterministically. The blending methodology is a pragmatic combination of two imperfect sources and should be interpreted with appropriate caution."
+    },
+    {
+      "id": "sst_upwelling",
+      "title": "SST and upwelling",
+      "body": "The marine SST forecast does not account for wind-driven upwelling events, which are common along the Cantabrian coast of Spain and can cause surface temperatures significantly colder than the model suggests."
+    }
+  ]
+}
