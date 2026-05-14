@@ -1,0 +1,35 @@
+name: Build Methodology
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run build_methodology.py
+        run: python docs/build_methodology.py
+
+      - name: Commit changes if any
+        run: |
+          git config user.email "github-actions@github.com"
+          git config user.name "GitHub Actions"
+          git diff --quiet && git diff --staged --quiet || (
+            git add docs/methodology.json docs/methodology.md &&
+            git commit -m "chore: sync methodology from pyproject.toml [skip ci]" &&
+            git push
+          )
