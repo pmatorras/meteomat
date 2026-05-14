@@ -4,7 +4,18 @@ import re
 from pathlib import Path
 
 docs = Path(__file__).parent
-data = json.loads((docs / "methodology.json").read_text(encoding="utf-8"))
+root = docs.parent
+
+# Sync version from pyproject.toml into methodology.json
+_pyproject = root / "pyproject.toml"
+_version_match = re.search(r'^version\s*=\s*"([^"]+)"', _pyproject.read_text(encoding="utf-8"), re.MULTILINE)
+if not _version_match:
+    raise ValueError("Could not find version in pyproject.toml")
+
+json_path = docs / "methodology.json"
+data = json.loads(json_path.read_text(encoding="utf-8"))
+data["version"] = _version_match.group(1)
+json_path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 md_path = docs / "methodology.md"
 md = md_path.read_text(encoding="utf-8")
 
