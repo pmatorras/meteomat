@@ -1,4 +1,4 @@
-name: Deploy Dashboard to HF Space (Backup)
+name: Deploy Dashboard to HF Space (Betatest)
 
 on:
   workflow_dispatch:
@@ -9,7 +9,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Deploy to Hugging Face (backup)
+      - name: Deploy to Hugging Face (betatest)
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
@@ -22,6 +22,10 @@ jobs:
           # 3. Go into the clean directory
           cd /tmp/hf_deploy
           
+          # Tag the space title for betatest
+          sed -i 's/^title: Meteomat$/title: Meteomat (betatest)/' hf_space_metadata.yml
+          sed -i 's/\("title": ".*\)"/\1 (betatest)"/' src/meteomat/cfg/config.py
+
           # 4. Merge the README with the HF metadata
           cat hf_space_metadata.yml > hf_readme.md
           echo "" >> hf_readme.md
@@ -38,4 +42,4 @@ jobs:
           git commit -m "Deploy from GitHub Actions"
           
           # 7. Force push to the 'main' branch on Hugging Face
-          git push -f https://pmatorras:$HF_TOKEN@huggingface.co/spaces/pmatorras/meteomat_backup HEAD:main
+          git push -f https://pmatorras:$HF_TOKEN@huggingface.co/spaces/pmatorras/meteomat_betatest HEAD:main

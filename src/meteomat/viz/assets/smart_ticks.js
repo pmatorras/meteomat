@@ -259,9 +259,27 @@
     Plotly.relayout(gd, updates).finally(() => { gd._smartTicksBusy = false; });
   }
 
-  // Initialize
-  applyStreamlitStyle();
-  applySmartTicks();
+  // Initialize — but defer full setup until the chart is actually visible,
+  // because charts in inactive tabs have zero dimensions on first load.
+  function fullSetup() {
+    applyStreamlitStyle();
+    applySmartTicks();
+  }
+
+  if (gd.offsetWidth > 0) {
+    fullSetup();
+  } else if (typeof IntersectionObserver !== "undefined") {
+    const io = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        io.disconnect();
+        const p = Plotly.Plots.resize(gd);
+        (p instanceof Promise ? p : Promise.resolve()).then(() => fullSetup());
+      }
+    }, { threshold: 0.1 });
+    io.observe(gd);
+  } else {
+    fullSetup();
+  }
 
   // Update on zoom/pan
   gd.on("plotly_relayout", (e) => {
@@ -361,7 +379,10 @@
   });
 
   // Update on theme changes — watch both root attribute changes and head <style> injections
-  const obs = new MutationObserver(() => applyStreamlitStyle());
+  const obs = new MutationObserver(() => {
+    applyStreamlitStyle();
+    if (gd.offsetWidth > 0) applySmartTicks();
+  });
   obs.observe(parent.document.documentElement, { attributes: true, attributeFilter: ["style", "class"] });
   try {
     // Streamlit changes theme by injecting/updating <style> in <head>

@@ -4,18 +4,22 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "meteomat"
-version = "1.6.2"
+version = "2.0.1"
 description = "Probabilistic rainfall forecasts for Europe with ensemble uncertainty visualization "
 authors = [{name = "Pablo Matorras-Cuevas", email = "pablo.matorras@github.com"}]
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "pandas>=2.0.0",
+    "pandas>=2.1.0",
     "matplotlib>=3.7.0",
     "plotly",
     "folium",
     "streamlit",
     "streamlit-folium",
+    "python-telegram-bot>=20.0",
+    "kaleido",
+    "shapely",
+    "pyproj",
 ]
 [project.optional-dependencies]
 train = [ 

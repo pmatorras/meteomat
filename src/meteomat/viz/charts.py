@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import plotly.graph_objects as go
 import plotly.io as pio
 from plotly.subplots import make_subplots
@@ -43,6 +44,160 @@ def direction_to_arrow(deg):
     return arrows[idx]
 
 
+def create_marine_dashboard(data: dict, weather_data: dict, location: dict | None = None, lang: str = "en") -> go.Figure:
+    """4-panel marine chart: wave height (+ direction arrows), wave period, wind, SST."""
+    from meteomat.cfg.config import LANG
+    t = LANG[lang]
+
+    dates = data["dates"]
+    wdates = weather_data["dates"]
+
+    fig = make_subplots(
+        rows=4, cols=1,
+        subplot_titles=(t["wave_height"], t["wave_period"], t["wind"], t["sea_surface_temperature"]),
+        vertical_spacing=0.10,
+        row_heights=[0.25, 0.25, 0.25, 0.25],
+    )
+
+    # === WAVE HEIGHT ===
+    wave_dir_text = [
+        f"{direction_to_cardinal(d)} ({d:.0f}°)" if not np.isnan(d) else "N/A"
+        for d in data["wave_direction"]
+    ]
+    swell_dir_text = [
+        f"{direction_to_cardinal(d)} ({d:.0f}°)" if not np.isnan(d) else "N/A"
+        for d in data["swell_wave_direction"]
+    ]
+    fig.add_trace(go.Scatter(
+        x=dates, y=data["wave_height"],
+        line=dict(width=3, color="rgb(0, 119, 190)"),
+        showlegend=False, name="Total",
+        text=wave_dir_text,
+        hovertemplate="<b>Total:</b> %{y:.2f} m (%{text})<extra></extra>",
+    ), row=1, col=1)
+    fig.add_trace(go.Scatter(
+        x=dates, y=data["swell_wave_height"],
+        line=dict(width=2, color="rgb(0, 180, 216)"),
+        showlegend=False, name="Swell",
+        text=swell_dir_text,
+        hovertemplate="<b>Swell:</b> %{y:.2f} m (%{text})<extra></extra>",
+    ), row=1, col=1)
+    fig.add_trace(go.Scatter(
+        x=dates, y=data["wind_wave_height"],
+        line=dict(width=2, color="rgba(144, 224, 239, 0.85)"),
+        showlegend=False, name="Wind wave",
+        hovertemplate="<b>Wind wave:</b> %{y:.2f} m<extra></extra>",
+    ), row=1, col=1)
+
+    arrow_interval = max(1, len(dates) // 12)
+    for i in range(0, len(dates), arrow_interval):
+        if np.isnan(data["wave_direction"][i]):
+            continue
+        fig.add_annotation(
+            x=dates[i], y=0.97,
+            text=direction_to_arrow(data["wave_direction"][i]),
+            showarrow=False,
+            font=dict(size=16, color="rgb(0, 80, 140)"),
+            xref="x", yref="y domain",
+            xanchor="center", yanchor="top",
+        )
+
+    # === WAVE PERIOD ===
+    fig.add_trace(go.Scatter(
+        x=dates, y=data["wave_period"],
+        line=dict(width=2, color="rgb(72, 149, 239)"),
+        showlegend=False, name="Period",
+        hovertemplate="<b>Period:</b> %{y:.1f} s<extra></extra>",
+    ), row=2, col=1)
+    fig.add_trace(go.Scatter(
+        x=dates, y=data["swell_wave_period"],
+        line=dict(width=2, color="rgb(144, 190, 109)", dash="dot"),
+        showlegend=False, name="Swell period",
+        text=swell_dir_text,
+        hovertemplate="<b>Swell period:</b> %{y:.1f} s (%{text})<extra></extra>",
+    ), row=2, col=1)
+
+    # === WIND (from weather_data) ===
+    fig.add_trace(go.Scatter(
+        x=wdates, y=weather_data["wind_90th"],
+        fill=None, line=dict(width=0),
+        showlegend=False, hoverinfo="skip",
+    ), row=3, col=1)
+    fig.add_trace(go.Scatter(
+        x=wdates, y=weather_data["wind_10th"],
+        fill="tonexty", fillcolor="rgba(0, 204, 150, 0.15)",
+        line=dict(width=0),
+        showlegend=False, hoverinfo="skip",
+    ), row=3, col=1)
+
+    wind_hover = [
+        f"{direction_to_cardinal(d)} ({d:.0f}°)" for d in weather_data["wind_direction"]
+    ]
+    fig.add_trace(go.Scatter(
+        x=wdates, y=weather_data["wind_median"],
+        line=dict(width=2, color="rgb(0, 204, 150)"),
+        showlegend=False, name="Wind",
+        text=wind_hover,
+        hovertemplate="<b>Wind:</b> %{y:.0f} km/h (%{text})<extra></extra>",
+    ), row=3, col=1)
+    fig.add_trace(go.Scatter(
+        x=wdates, y=weather_data["wind_gusts"],
+        line=dict(width=2, color="rgb(0, 150, 100)", dash="dot"),
+        showlegend=False, name="Gusts",
+        text=wind_hover,
+        hovertemplate="<b>Gusts:</b> %{y:.0f} km/h (%{text})<extra></extra>",
+    ), row=3, col=1)
+
+    wind_arrow_interval = max(1, len(wdates) // 12)
+    for i in range(0, len(wdates), wind_arrow_interval):
+        fig.add_annotation(
+            x=wdates[i], y=0.97,
+            text=direction_to_arrow(weather_data["wind_direction"][i]),
+            showarrow=False,
+            font=dict(size=16, color="rgb(0, 120, 90)"),
+            xref="x3", yref="y3 domain",
+            xanchor="center", yanchor="top",
+        )
+
+    # === SEA SURFACE TEMPERATURE ===
+    sst_smooth = pd.Series(data["sea_surface_temperature"]).rolling(window=3, center=True, min_periods=1).mean().values
+    fig.add_trace(go.Scatter(
+        x=dates, y=sst_smooth,
+        line=dict(width=2, color="rgb(255, 160, 86)"),
+        showlegend=False, name="SST",
+        hovertemplate="<b>SST:</b> %{y:.1f}°C<extra></extra>",
+    ), row=4, col=1)
+
+    # Axes
+    tick_stops = [
+        dict(dtickrange=[None, 86400000], value="%H:%M"),
+        dict(dtickrange=[86400000, 604800000], value="%b %d %H:%M"),
+        dict(dtickrange=[604800000, None], value="%b %d"),
+    ]
+    fig.update_xaxes(
+        hoverformat="%b %d, %H:%M",
+        matches="x",
+        range=[dates[0], dates[-1]],
+        tickformatstops=tick_stops,
+        tickformat="%b %d",
+    )
+
+    fig.update_yaxes(title_text="m",    row=1, col=1, autorange=True, autorangeoptions=dict(minallowed=0))
+    fig.update_yaxes(title_text="s",    row=2, col=1, autorange=True, autorangeoptions=dict(minallowed=0))
+    fig.update_yaxes(title_text="km/h", row=3, col=1, autorange=True, autorangeoptions=dict(minallowed=0))
+    fig.update_yaxes(title_text="°C",   row=4, col=1, autorange=True)
+
+    fig.update_layout(
+        height=1000,
+        showlegend=False,
+        hovermode="x unified",
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        margin=dict(l=50, r=20, t=40, b=65),
+    )
+    return fig
+
+
 def create_weather_dashboard(data, location=None, add_title=None, lang = "en"):
     """Create visualization with improved rainfall scale"""
     print("\n📊 Creating weather dashboard...")
@@ -62,9 +217,10 @@ def create_weather_dashboard(data, location=None, add_title=None, lang = "en"):
         rain_hover_text.append(f"{data['rain_probability'][i]:.0f}%")
     
     # RAINFALL TRANSFORMATION: Square root scale for better visibility
-    rain_10th_sqrt = np.sqrt(data['rain_10th'])
-    rain_median_sqrt = np.sqrt(data['rain_median'])
-    rain_90th_sqrt = np.sqrt(data['rain_90th'])
+    # Round to 0.1mm — sub-0.1mm precision is below our detection threshold
+    rain_10th_sqrt = np.sqrt(np.round(data['rain_10th'], 1))
+    rain_median_sqrt = np.sqrt(np.round(data['rain_median'], 1))
+    rain_90th_sqrt = np.sqrt(np.round(data['rain_90th'], 1))
     
     fig = make_subplots(
         rows=4, cols=1,
@@ -127,9 +283,9 @@ def create_weather_dashboard(data, location=None, add_title=None, lang = "en"):
         line=dict(width=2, color='rgb(99, 110, 250)', shape='hv'),  # shape='hv' makes it stepped!
         showlegend=False,
         name='Rainfall',
-        customdata=data['rain_median'],
+        customdata=np.round(data['rain_median'], 1),
         text=rain_hover_text,
-        hovertemplate='<b>Rain:</b> %{customdata:.2f} mm (Prob: %{text})<extra></extra>',
+        hovertemplate='<b>Rain:</b> %{customdata:.1f} mm (Prob: %{text})<extra></extra>',
         connectgaps=False,
         mode='lines'
     ), row=2, col=1)
@@ -216,10 +372,6 @@ def create_weather_dashboard(data, location=None, add_title=None, lang = "en"):
         ],
         tickformat="%b %d"  # Default format for full view
     )
-    fig.update_xaxes(title_text="", row=1, col=1)
-    fig.update_xaxes(title_text="", row=2, col=1)
-    fig.update_xaxes(title_text="", row=3, col=1)
-    fig.update_xaxes(title_text="", row=4, col=1)
     
     fig.update_yaxes(title_text="°C", row=1, col=1)
     

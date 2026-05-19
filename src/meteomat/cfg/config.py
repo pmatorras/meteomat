@@ -82,6 +82,13 @@ LANG = {
         "wind": "Wind Speed / Gusts",
         "humidity": "Relative Humidity",
         "date": "date",
+        "tab_weather": "🌤️ Weather",
+        "tab_sea": "🌊 Sea",
+        "wave_height": "Wave Height",
+        "wave_period": "Wave Period",
+        "wave_direction": "Wave Direction",
+        "sea_surface_temperature": "Sea Surface Temp",
+        "no_sea_data": "No sea data available for this location. The marine forecast only covers coastal and offshore areas.",
     },
     "es": {
         "title": "🌦️ Meteomat - Pronósticos Meteorológicos Europeos",
@@ -91,6 +98,13 @@ LANG = {
         "wind": "Viento / Racha Máxima",
         "humidity": "Humedad Relativa",
         "date": "fecha",
+        "tab_weather": "🌤️ Tiempo",
+        "tab_sea": "🌊 Mar",
+        "wave_height": "Altura de Ola",
+        "wave_period": "Período de Ola",
+        "wave_direction": "Dirección de Ola",
+        "sea_surface_temperature": "Temp. Superficial del Mar",
+        "no_sea_data": "No hay datos marítimos disponibles para esta ubicación. El pronóstico marino solo cubre zonas costeras y mar abierto.",
     }
 }
 
