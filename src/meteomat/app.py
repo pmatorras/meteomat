@@ -79,12 +79,15 @@ if (default_lat is None or default_lon is None) and default_name:
 # helper to notify parent iframe of current state
 
 def _fetch_both(location, location_info, lang):
+    import pandas as pd
     forecast_data = fetch_forecast(location=location)
-    st.session_state.forecast_fig = create_weather_dashboard(forecast_data, location_info, lang=lang)
+    dates = forecast_data['dates']
+    now = max(dates[0], min(pd.Timestamp.utcnow().tz_localize(None), dates[-1]))
+    st.session_state.forecast_fig = create_weather_dashboard(forecast_data, location_info, lang=lang, now=now)
     if is_coastal(location['lat'], location['lon']):
         marine_data = fetch_marine_forecast(location=location)
         st.session_state.marine_fig = (
-            create_marine_dashboard(marine_data, forecast_data, location_info, lang=lang) if marine_data else None
+            create_marine_dashboard(marine_data, forecast_data, location_info, lang=lang, now=now) if marine_data else None
         )
     else:
         st.session_state.marine_fig = None
