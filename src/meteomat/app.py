@@ -14,15 +14,24 @@ if os.environ.get("TELEGRAM_BOT_TOKEN"):
     from meteomat.bot import start_bot_thread
     start_bot_thread()
 
+_LANG_CODES   = list(LANG.keys())
+_LANG_OPTIONS = [f"{LANG[c]['flag']} {c.upper()}" for c in _LANG_CODES]
+_RANGE_OPTIONS = {"72h": 72, "5d": 120, "7d": 168}
+_DEFAULT_HOURS = 120
+
 query_params = st.query_params
 default_lang = query_params.get("lang", "en")
-if default_lang not in ["en", "es"]:
+if default_lang not in _LANG_CODES:
     default_lang = "en"
 
 # Read URL params: support ?name=ZZ alone, or ?lat=XX&lon=YY&name=ZZ
 default_lat = float(query_params["lat"]) if "lat" in query_params else None
 default_lon = float(query_params["lon"]) if "lon" in query_params else None
 default_name = query_params.get("name", None)
+
+_TEST_LOCATIONS = {"1": (43.4623, -3.8099, "Santander"), "2": (40.4168, -3.7038, "Madrid")}
+if (not default_lat) and (os.environ.get("TEST_LOC") in _TEST_LOCATIONS):
+    default_lat, default_lon, default_name = _TEST_LOCATIONS[os.environ["TEST_LOC"]]
 
 
 @st.cache_data(ttl=3600)
@@ -76,21 +85,40 @@ if (default_lat is None or default_lon is None) and default_name:
         st.query_params["lon"] = str(round(default_lon, 4))
 
 
-# helper to notify parent iframe of current state
-
-def _fetch_both(location, location_info, lang):
+def _slice_data(data, hours):
     import pandas as pd
-    forecast_data = fetch_forecast(location=location)
-    dates = forecast_data['dates']
+    cutoff = data['dates'][0] + pd.Timedelta(hours=hours)
+    mask = data['dates'] <= cutoff
+    return {k: v[mask] if hasattr(v, '__len__') and len(v) == len(data['dates']) else v
+            for k, v in data.items()}
+
+
+def _render_figs(lang):
+    import pandas as pd
+    forecast_data = st.session_state.forecast_data
+    marine_data = st.session_state.marine_data
+    location_info = st.session_state.location_info
+    hours = _RANGE_OPTIONS.get(st.session_state.forecast_range, _DEFAULT_HOURS)
+    sliced = _slice_data(forecast_data, hours)
+    dates = sliced['dates']
     now = max(dates[0], min(pd.Timestamp.utcnow().tz_localize(None), dates[-1]))
-    st.session_state.forecast_fig = create_weather_dashboard(forecast_data, location_info, lang=lang, now=now)
-    if is_coastal(location['lat'], location['lon']):
-        marine_data = fetch_marine_forecast(location=location)
-        st.session_state.marine_fig = (
-            create_marine_dashboard(marine_data, forecast_data, location_info, lang=lang, now=now) if marine_data else None
-        )
+    st.session_state.forecast_fig = create_weather_dashboard(sliced, location_info, lang=lang, now=now)
+    if marine_data is not None:
+        sliced_marine = _slice_data(marine_data, hours)
+        st.session_state.marine_fig = create_marine_dashboard(sliced_marine, sliced, location_info, lang=lang, now=now)
     else:
         st.session_state.marine_fig = None
+
+
+def _fetch_both(location, location_info, lang):
+    forecast_data = fetch_forecast(location=location)
+    st.session_state.forecast_data = forecast_data
+    st.session_state.location_info = location_info
+    if is_coastal(location['lat'], location['lon']):
+        st.session_state.marine_data = fetch_marine_forecast(location=location)
+    else:
+        st.session_state.marine_data = None
+    _render_figs(lang)
 
 
 def notify_parent(lat, lon, lang_code, name=""):
@@ -106,31 +134,36 @@ st.set_page_config(page_title="Meteomat", layout="wide")
 col1, col2 = st.columns([6, 1])
 
 with col2:
-    default_idx = 0 if default_lang == "en" else 1
-    lang = st.selectbox("🌐", ["🇬🇧 EN", "🇪🇸 ES"], index=default_idx, label_visibility="collapsed", key="lang_selector")
-    lang_code = "en" if "EN" in lang else "es"
+    default_idx = _LANG_CODES.index(default_lang) if default_lang in _LANG_CODES else 0
+    lang = st.selectbox("🌐", _LANG_OPTIONS, index=default_idx, label_visibility="collapsed", key="lang_selector")
+    lang_code = _LANG_CODES[_LANG_OPTIONS.index(lang)]
 
 # Update URL when language changes
 if lang_code != default_lang:
     st.query_params["lang"] = lang_code
-    if st.session_state.last_location and st.session_state.forecast_fig:
-        lat, lon = st.session_state.last_location
-        location = {"Name": st.session_state.location_name or "", "lat": lat, "lon": lon}
-        location_info = {"name": st.session_state.location_name or f"{lat:.2f}°N, {lon:.2f}°E"}
-        _fetch_both(location, location_info, lang_code)
+    if st.session_state.last_location and st.session_state.forecast_data:
+        _render_figs(lang_code)
     st.rerun()
 
 t = LANG[lang_code]
 with col1:
     st.title(t["title"])
 
-# Initialize session state and config
+# Initialize session state
 if 'last_location' not in st.session_state:
     st.session_state.last_location = (default_lat, default_lon) if default_lat and default_lon else None
 if 'forecast_fig' not in st.session_state:
     st.session_state.forecast_fig = None
 if 'marine_fig' not in st.session_state:
     st.session_state.marine_fig = None
+if 'forecast_data' not in st.session_state:
+    st.session_state.forecast_data = None
+if 'marine_data' not in st.session_state:
+    st.session_state.marine_data = None
+if 'location_info' not in st.session_state:
+    st.session_state.location_info = None
+if 'forecast_range' not in st.session_state:
+    st.session_state.forecast_range = "5d"
 if 'map_center' not in st.session_state:
     st.session_state.map_center = [default_lat, default_lon] if default_lat and default_lon else [45.0, 0.0]
 if 'map_zoom' not in st.session_state:
@@ -218,6 +251,17 @@ if st.session_state.forecast_fig is not None:
             st.markdown(f"## 📍 {st.session_state.location_name} ({lat:.2f}°N, {lon:.2f}°E)")
         else:
             st.markdown(f"## 📍 {lat:.2f}°N, {lon:.2f}°E")
+
+        selected_range = st.radio(
+            "range", list(_RANGE_OPTIONS.keys()),
+            index=list(_RANGE_OPTIONS.keys()).index(st.session_state.forecast_range),
+            horizontal=True, label_visibility="collapsed"
+        )
+        if selected_range != st.session_state.forecast_range:
+            st.session_state.forecast_range = selected_range
+            _render_figs(lang_code)
+            st.rerun()
+
         if st.session_state.marine_fig:
             tab_weather, tab_sea = st.tabs([t["tab_weather"], t["tab_sea"]])
         else:
