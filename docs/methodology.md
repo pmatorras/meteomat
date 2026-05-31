@@ -1,21 +1,36 @@
 # Forecast Methodology
 
-This document describes how each variable displayed in Meteomat is sourced and calculated.
+<!-- BEGIN:description -->
+Meteomat shows probabilistic weather forecasts anywhere in the world. Instead of a single number, it shows a range of likely outcomes so you can see not just what is most likely, but how confident the forecast is.
+<!-- END:description -->
+
+It is powered by ECMWF, the European Centre for Medium-Range Weather Forecasts, which produces what is widely considered the world's best operational weather model.
+
+---
+
+## How to read the charts
+
+Each chart shows a **central line** (the best estimate) surrounded by a **shaded band**. The band spans the 10th to 90th percentile of the forecast ensemble — meaning there is an 80% chance the true value falls within it. A narrow band means a confident forecast; a wide band means high uncertainty.
+
+- **Rainfall** uses a square-root y-axis so that small amounts (drizzle) remain visible without large amounts dominating the chart.
+- **Wind and wave direction** is shown as arrows anchored to the top of each panel.
+- **All panels share the same time axis** — zoom or pan one and the rest follow.
 
 ---
 
 ## Data Sources
 
-All forecasts combine two ECMWF products, both accessed via the [Open-Meteo](https://open-meteo.com) API:
+Weather forecasts combine two ECMWF land products, while a third is used for the wave and sea surface temperature data. They are both accessed via the [Open-Meteo](https://open-meteo.com) API at native resolution:
 
+<!-- BEGIN:sources -->
 | Product | Resolution | Members | Horizon |
 |---|---|---|---|
-| **ECMWF IFS Ensemble (EPS)** | ~25 km | 51 perturbed runs | 7 days |
+| **ECMWF IFS Ensemble (EPS)** | ~18 km | 51 perturbed runs | 7 days |
 | **ECMWF IFS HRES** | ~9 km | 1 deterministic run | 7 days |
+| **ECMWF Wave Model** | ~28 km | — | 7 days |
+<!-- END:sources -->
 
-Both products share the same model physics and initial conditions. The ensemble samples uncertainty by perturbing the initial atmospheric state 51 times; HRES is the single highest-resolution deterministic run from the same system.
-
-Marine data (waves, sea surface temperature) comes from the [Open-Meteo Marine API](https://open-meteo.com/en/docs/marine-api).
+Both IFS products share the same model physics and initial conditions. The ensemble samples uncertainty by perturbing the initial atmospheric state 51 times; HRES is the single highest-resolution deterministic run from the same system. ECMF Wave model is only shown for coastal locations.
 
 ---
 
@@ -81,7 +96,9 @@ Sourced from the Open-Meteo Marine API. A 3-hour centred rolling average is appl
 
 ## Limitations
 
-- **Spatial resolution**: HRES at ~9 km and the ensemble at ~25 km cannot resolve sub-grid features such as valley-scale orography, urban heat islands, or small coastal inlets. Two nearby locations within the same grid cell will receive nearly identical forecasts.
+<!-- BEGIN:limitations -->
+- **Spatial resolution**: HRES at ~9 km and the ensemble at ~18 km cannot resolve sub-grid features such as valley-scale orography, urban heat islands, or small coastal inlets. Two nearby locations within the same grid cell will receive nearly identical forecasts.
 - **Ensemble calibration**: The ECMWF ensemble is one of the best-calibrated probabilistic forecast systems in the world, but calibration is not perfect. Stated probabilities are skill estimates, not guarantees.
-- **Rainfall uncertainty**: Precipitation is the hardest variable to forecast deterministically. The blending methodology described above is a pragmatic combination of two imperfect sources and should be interpreted with appropriate caution.
+- **Rainfall uncertainty**: Precipitation is the hardest variable to forecast deterministically. The blending methodology is a pragmatic combination of two imperfect sources and should be interpreted with appropriate caution.
 - **SST and upwelling**: The marine SST forecast does not account for wind-driven upwelling events, which are common along the Cantabrian coast of Spain and can cause surface temperatures significantly colder than the model suggests.
+<!-- END:limitations -->
