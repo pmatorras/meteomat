@@ -274,12 +274,12 @@ if st.session_state.forecast_fig is not None:
         with tab_weather:
             html = fig_to_streamlit_html(st.session_state.forecast_fig, lang=lang_code)
             html = html.replace("<head>", "<head><style>html,body{overflow:hidden}</style>", 1)
-            st.iframe(html, height=1000)
+            st.components.v1.html(html, height=1000)
         if st.session_state.marine_fig:
             with tab_sea:
                 html = fig_to_streamlit_html(st.session_state.marine_fig, lang=lang_code)
                 html = html.replace("<head>", "<head><style>html,body{overflow:hidden}</style>", 1)
-                st.iframe(html, height=1000)
+                st.components.v1.html(html, height=1000)
         st.markdown("---")
 
 # Notify parent iframe of current state (for meteo.matorras.com address bar)
