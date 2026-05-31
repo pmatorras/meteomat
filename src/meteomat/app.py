@@ -29,7 +29,11 @@ default_lat = float(query_params["lat"]) if "lat" in query_params else None
 default_lon = float(query_params["lon"]) if "lon" in query_params else None
 default_name = query_params.get("name", None)
 
-_TEST_LOCATIONS = {"1": (43.4623, -3.8099, "Santander"), "2": (40.4168, -3.7038, "Madrid")}
+_TEST_LOCATIONS = {
+    "1": (43.4623, -3.8099, "Santander"), 
+    "2": (40.4168, -3.7038, "Madrid"),
+    "3": (14.5995, 120.9842, "Manila"),
+    }
 if (not default_lat) and (os.environ.get("TEST_LOC") in _TEST_LOCATIONS):
     default_lat, default_lon, default_name = _TEST_LOCATIONS[os.environ["TEST_LOC"]]
 
@@ -101,7 +105,8 @@ def _render_figs(lang):
     hours = _RANGE_OPTIONS.get(st.session_state.forecast_range, _DEFAULT_HOURS)
     sliced = _slice_data(forecast_data, hours)
     dates = sliced['dates']
-    now = max(dates[0], min(pd.Timestamp.utcnow().tz_localize(None), dates[-1]))
+    utc_offset = pd.Timedelta(seconds=forecast_data.get('utc_offset_seconds', 0))
+    now = max(dates[0], min(pd.Timestamp.utcnow().tz_localize(None) + utc_offset, dates[-1]))
     st.session_state.forecast_fig = create_weather_dashboard(sliced, location_info, lang=lang, now=now)
     if marine_data is not None:
         sliced_marine = _slice_data(marine_data, hours)
@@ -248,7 +253,7 @@ if st.session_state.forecast_fig is not None:
     with forecast_container:
         lat, lon = st.session_state.last_location
         if st.session_state.location_name:
-            st.markdown(f"## 📍 {st.session_state.location_name} ({lat:.2f}°N, {lon:.2f}°E)")
+            st.markdown(f"## 📍 {st.session_state.location_name}")
         else:
             st.markdown(f"## 📍 {lat:.2f}°N, {lon:.2f}°E")
 
