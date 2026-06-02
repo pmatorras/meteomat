@@ -12,7 +12,7 @@ def smart_ticks_js() -> str:
     return (resources.files("meteomat.viz.assets") / "smart_ticks.js").read_text(encoding="utf-8")  # [web:76]
 
 def fig_to_streamlit_html(fig, lang="en") -> str:
-    fig.update_xaxes(hoverformat="%b %d, %H:%M", matches="x")
+    fig.update_xaxes(hoverformat="%a %b %d, %H:%M", matches="x")
     
     # Generate HTML
     html = pio.to_html(fig, full_html=False, include_plotlyjs="cdn")

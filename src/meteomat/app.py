@@ -16,8 +16,8 @@ if os.environ.get("TELEGRAM_BOT_TOKEN"):
 
 _LANG_CODES   = list(LANG.keys())
 _LANG_OPTIONS = [f"{LANG[c]['flag']} {c.upper()}" for c in _LANG_CODES]
-_RANGE_OPTIONS = {"72h": 72, "5d": 120, "7d": 168}
-_DEFAULT_HOURS = 120
+_RANGE_OPTIONS = {"24h": 24, "72h": 72, "7d": 168}
+_DEFAULT_HOURS = 72
 
 query_params = st.query_params
 default_lang = query_params.get("lang", "en")
@@ -168,7 +168,7 @@ if 'marine_data' not in st.session_state:
 if 'location_info' not in st.session_state:
     st.session_state.location_info = None
 if 'forecast_range' not in st.session_state:
-    st.session_state.forecast_range = "5d"
+    st.session_state.forecast_range = "72h"
 if 'map_center' not in st.session_state:
     st.session_state.map_center = [default_lat, default_lon] if default_lat and default_lon else [45.0, 0.0]
 if 'map_zoom' not in st.session_state:

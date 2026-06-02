@@ -172,10 +172,10 @@
   // ------------------------
   // Smart ticks
   // ------------------------
-  function chooseStepHours(spanHours) {
+  function chooseStepHours(spanHours, isNarrow) {
     if (spanHours >= 24 * 5) return 24;
-    if (spanHours >= 24 * 2) return 6;
-    if (spanHours >= 24) return 3;
+    if (spanHours >= 24 * 2) return isNarrow ? 6 : 12;
+    if (spanHours >= 24) return isNarrow ? 3 : 2;
     if (spanHours >= 6) return 1;
     return 0.5;
   }
@@ -188,7 +188,7 @@
 
   function computeTicks(x0, x1, isNarrow) {
     const spanHours = (x1 - x0) / 36e5;
-    const stepHours = chooseStepHours(spanHours);
+    const stepHours = chooseStepHours(spanHours, isNarrow);
     const stepMs = stepHours * 36e5;
 
     const multiDay = (new Date(x0)).toDateString() !== (new Date(x1)).toDateString();
@@ -249,10 +249,12 @@
     const out = computeTicks(x0, x1, isNarrow);
     const updates = {};
 
+    const hoverFmt = LANG === "es" ? "%a %b %d, %H:%M" : "%a %b %d, %H:%M";
     for (const ax of allAxes("xaxis")) {
       updates[`${ax}.tickmode`] = "array";
       updates[`${ax}.tickvals`] = out.tickvals;
       updates[`${ax}.ticktext`] = out.ticktext;
+      updates[`${ax}.hoverformat`] = hoverFmt;
     }
 
     gd._smartTicksBusy = true;
@@ -261,7 +263,24 @@
 
   // Initialize — but defer full setup until the chart is actually visible,
   // because charts in inactive tabs have zero dimensions on first load.
+  function applyLocale() {
+    if (LANG !== "es") return;
+    Plotly.register({
+      moduleType: "locale",
+      name: "es",
+      dictionary: {},
+      format: {
+        days: ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"],
+        shortDays: daysES,
+        months: ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"],
+        shortMonths: monthsES,
+      }
+    });
+    Plotly.relayout(gd, { locale: "es" });
+  }
+
   function fullSetup() {
+    applyLocale();
     applyStreamlitStyle();
     applySmartTicks();
   }
@@ -376,6 +395,18 @@
       if (e["xaxis.range[0]"] || e["xaxis.range[1]"] || e["xaxis.range"] ||  e["xaxis.autorange"]) {
           applySmartTicks();
       }
+  });
+
+  // Override hover x-label to always show full date, independent of tick label text
+  gd.on("plotly_hover", function(data) {
+    const xVal = data.xvals?.[0] ?? data.points?.[0]?.x;
+    if (!xVal) return;
+    const d = new Date(xVal);
+    if (!isFinite(d.getTime())) return;
+    const days_arr = LANG === "es" ? daysES : daysEN;
+    const months_arr = LANG === "es" ? monthsES : monthsEN;
+    const label = `${days_arr[d.getDay()]} ${months_arr[d.getMonth()]} ${pad2(d.getDate())}, ${fmtHM(d)}`;
+    gd.querySelectorAll(".hoverlayer .axistext").forEach(el => { el.textContent = label; });
   });
 
   // Update on theme changes — watch both root attribute changes and head <style> injections
