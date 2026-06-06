@@ -75,7 +75,8 @@ STATIONS_CACHE_FILE = Path("data/aemet_stations_by_region.json")
 # At the end of config.py
 LANG = {
     "en": {
-        "title": "🌦️ Meteomat - European Weather Forecasts",
+        "flag": "🇬🇧",
+        "title": "🌦️ Meteomat - Probabilistic Weather Forecasts",
         "location_search": "Search location",
         "temperature": "Temperature",
         "rainfall": "Rainfall",
@@ -91,7 +92,8 @@ LANG = {
         "no_sea_data": "No sea data available for this location. The marine forecast only covers coastal and offshore areas.",
     },
     "es": {
-        "title": "🌦️ Meteomat - Pronósticos Meteorológicos Europeos",
+        "flag": "🇪🇸",
+        "title": "🌦️ Meteomat - Pronósticos Probabilísticos del Tiempo",
         "location_search": "Buscar ubicación",
         "temperature": "Temperatura",
         "rainfall": "Precipitaciones",
@@ -105,6 +107,40 @@ LANG = {
         "wave_direction": "Dirección de Ola",
         "sea_surface_temperature": "Temp. Superficial del Mar",
         "no_sea_data": "No hay datos marítimos disponibles para esta ubicación. El pronóstico marino solo cubre zonas costeras y mar abierto.",
-    }
+    },
+    "fr": {
+        "flag": "🇫🇷",
+        "title": "🌦️ Meteomat - Prévisions Météo Probabilistes",
+        "location_search": "Recherchez un lieu",
+        "temperature": "Température",
+        "rainfall": "Précipitations",
+        "wind": "Vent / Rafales",
+        "humidity": "Humidité Relative",
+        "date": "date",
+        "tab_weather": "🌤️ Météo",
+        "tab_sea": "🌊 Mer",
+        "wave_height": "Hauteur des Vagues",
+        "wave_period": "Période des Vagues",
+        "wave_direction": "Direction des Vagues",
+        "sea_surface_temperature": "Temp. de Surface de la Mer",
+        "no_sea_data": "Aucune donnée marine disponible pour cet emplacement. Les prévisions marines couvrent uniquement les zones côtières et hauturières.",
+    },
+    "it": {
+        "flag": "🇮🇹",
+        "title": "🌦️ Meteomat - Previsioni Meteo Probabilistiche",
+        "location_search": "Cerca una località",
+        "temperature": "Temperatura",
+        "rainfall": "Precipitazioni",
+        "wind": "Vento / Raffiche",
+        "humidity": "Umidità Relativa",
+        "date": "data",
+        "tab_weather": "🌤️ Meteo",
+        "tab_sea": "🌊 Mare",
+        "wave_height": "Altezza delle Onde",
+        "wave_period": "Periodo delle Onde",
+        "wave_direction": "Direzione delle Onde",
+        "sea_surface_temperature": "Temp. Superficie del Mare",
+        "no_sea_data": "Nessun dato marino disponibile per questa località. Le previsioni marine coprono solo le zone costiere e al largo.",
+    },
 }
 

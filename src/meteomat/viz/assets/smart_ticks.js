@@ -172,10 +172,10 @@
   // ------------------------
   // Smart ticks
   // ------------------------
-  function chooseStepHours(spanHours) {
+  function chooseStepHours(spanHours, isNarrow) {
     if (spanHours >= 24 * 5) return 24;
-    if (spanHours >= 24 * 2) return 6;
-    if (spanHours >= 24) return 3;
+    if (spanHours >= 24 * 2) return isNarrow ? 6 : 12;
+    if (spanHours >= 24) return isNarrow ? 3 : 2;
     if (spanHours >= 6) return 1;
     return 0.5;
   }
@@ -188,7 +188,7 @@
 
   function computeTicks(x0, x1, isNarrow) {
     const spanHours = (x1 - x0) / 36e5;
-    const stepHours = chooseStepHours(spanHours);
+    const stepHours = chooseStepHours(spanHours, isNarrow);
     const stepMs = stepHours * 36e5;
 
     const multiDay = (new Date(x0)).toDateString() !== (new Date(x1)).toDateString();
@@ -249,10 +249,12 @@
     const out = computeTicks(x0, x1, isNarrow);
     const updates = {};
 
+    const hoverFmt = LANG === "es" ? "%a %b %d, %H:%M" : "%a %b %d, %H:%M";
     for (const ax of allAxes("xaxis")) {
       updates[`${ax}.tickmode`] = "array";
       updates[`${ax}.tickvals`] = out.tickvals;
       updates[`${ax}.ticktext`] = out.ticktext;
+      updates[`${ax}.hoverformat`] = hoverFmt;
     }
 
     gd._smartTicksBusy = true;
@@ -261,7 +263,24 @@
 
   // Initialize — but defer full setup until the chart is actually visible,
   // because charts in inactive tabs have zero dimensions on first load.
+  function applyLocale() {
+    if (LANG !== "es") return;
+    Plotly.register({
+      moduleType: "locale",
+      name: "es",
+      dictionary: {},
+      format: {
+        days: ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"],
+        shortDays: daysES,
+        months: ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"],
+        shortMonths: monthsES,
+      }
+    });
+    Plotly.relayout(gd, { locale: "es" });
+  }
+
   function fullSetup() {
+    applyLocale();
     applyStreamlitStyle();
     applySmartTicks();
   }
@@ -377,6 +396,63 @@
           applySmartTicks();
       }
   });
+
+  // Fix hover x-label: when cursor is exactly on a tick position Plotly ignores
+  // hoverformat and shows the ticktext string instead (e.g. "06:00" instead of
+  // "Mon Jun 02, 06:00"). We correct this by re-writing the label every time
+  // Plotly updates the hover DOM, using MutationObserver for reliable timing.
+  let _hoverLabel = null;
+
+  gd.on("plotly_hover", function(data) {
+    const xVal = data.xvals?.[0] ?? data.points?.[0]?.x;
+    if (!xVal) return;
+    const d = new Date(xVal);
+    if (!isFinite(d.getTime())) return;
+    const days_arr = LANG === "es" ? daysES : daysEN;
+    const months_arr = LANG === "es" ? monthsES : monthsEN;
+    _hoverLabel = `${days_arr[d.getDay()]} ${months_arr[d.getMonth()]} ${pad2(d.getDate())}, ${fmtHM(d)}`;
+    _applyHoverLabel();
+  });
+
+  gd.on("plotly_unhover", function() { _hoverLabel = null; });
+
+  function _applyHoverLabel() {
+    if (!_hoverLabel) return;
+    // Don't rely on a specific CSS selector — Plotly's internal hover DOM
+    // structure changes between versions. Instead scan all text/tspan elements
+    // in the hoverlayer for a bare time string (e.g. "06:00") which is what
+    // Plotly shows when ticktext overrides hoverformat at exact tick positions.
+    // After replacement the pattern no longer matches → no infinite loop.
+    const els = gd.querySelectorAll(".hoverlayer text, .hoverlayer tspan");
+    if (DEBUG) console.log("_applyHoverLabel: scanning", els.length, "elements, label=", _hoverLabel);
+    for (const el of els) {
+      // Only touch leaf elements (no child elements — just a text node) so we
+      // don't wipe sibling tspans by setting textContent on a parent <text>.
+      if (el.children.length > 0) continue;
+      const txt = el.textContent.trim();
+      if (DEBUG && txt) console.log("  candidate:", JSON.stringify(txt), el.tagName, el.className?.baseVal ?? el.className);
+      if (/^\d{2}:\d{2}$/.test(txt)) {
+        // Use the tick's own time (txt = "12:00"), which is already correct.
+        // Only the date comes from _hoverLabel — the time from xvals is unreliable
+        // because Plotly passes the raw cursor x-position, not the snapped value,
+        // and JavaScript's Date() applies a local-timezone offset on top.
+        const dateOnly = _hoverLabel.split(",")[0].trim(); // e.g. "Sat Jun 06"
+        const fixed = `${dateOnly}, ${txt}`;
+        if (DEBUG) console.log("  → replacing with:", fixed);
+        el.textContent = fixed;
+        return;
+      }
+    }
+  }
+
+  // MutationObserver ensures we catch the re-render Plotly does after plotly_hover
+  // when the cursor lands exactly on a tick (Plotly writes ticktext into the DOM
+  // after the event fires).
+  const _hoverRoot = gd.querySelector(".hoverlayer");
+  if (_hoverRoot) {
+    new MutationObserver(_applyHoverLabel)
+      .observe(_hoverRoot, { subtree: true, childList: true, characterData: true });
+  }
 
   // Update on theme changes — watch both root attribute changes and head <style> injections
   const obs = new MutationObserver(() => {

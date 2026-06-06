@@ -18,6 +18,7 @@ def fetch_marine_forecast(location: dict) -> dict | None:
             "sea_surface_temperature"
         ),
         "forecast_days": 7,
+        "timezone": "auto",
     }
 
     try:
@@ -65,6 +66,7 @@ def fetch_hres_forecast(location: dict) -> dict | None:
         "longitude": location['lon'],
         "hourly": "temperature_2m,precipitation,wind_speed_10m,wind_direction_10m,relative_humidity_2m",
         "forecast_days": 7,
+        "timezone": "auto",
     }
 
     try:
@@ -186,7 +188,8 @@ def fetch_ensemble_forecast(location=None):
         "longitude": location['lon'],
         "hourly": "temperature_2m,precipitation,wind_speed_10m,wind_direction_10m,relative_humidity_2m",
         "models": "ecmwf_ifs025",
-        "forecast_days": 7
+        "forecast_days": 7,
+        "timezone": "auto",
     }
     
     response = requests.get(url, params=params)
@@ -254,5 +257,6 @@ def fetch_ensemble_forecast(location=None):
         results['humidity_90th'] = np.full(len(times), 80.0)
         print(f"  ⚠️  No humidity data available, using placeholders")
     
+    results['utc_offset_seconds'] = data.get('utc_offset_seconds', 0)
     print(f"  ✓ Computed percentiles and rain probability")
     return results
