@@ -1,5 +1,4 @@
 # src/meteomat/app.py
-import json
 import os
 import streamlit as st
 import folium, requests
@@ -129,14 +128,6 @@ def _fetch_both(location, location_info, lang):
         st.session_state.marine_data = None
     _render_figs(lang)
 
-
-def notify_parent(lat, lon, lang_code, name=""):
-    payload = json.dumps({"lat": lat, "lon": lon, "lang": lang_code, "name": name})
-    st.html(f"""
-    <script>
-    window.top.postMessage({payload}, '*');
-    </script>
-    """)
 
 
 st.set_page_config(page_title="Meteomat", layout="wide")
@@ -286,7 +277,3 @@ if st.session_state.forecast_fig is not None:
                 st.iframe(html, height=1000)
         st.markdown("---")
 
-# Notify parent iframe of current state (for meteo.matorras.com address bar)
-if st.session_state.last_location:
-    lat, lon = st.session_state.last_location
-    notify_parent(lat, lon, lang_code, st.session_state.location_name or "")
