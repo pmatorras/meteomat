@@ -89,11 +89,13 @@ if (default_lat is None or default_lon is None) and default_name:
         st.query_params["lon"] = str(round(default_lon, 4))
 
 
-def _slice_data(data, hours):
+def _slice_data(data, hours, start=None, now=None):
     import pandas as pd
-    cutoff = data['dates'][0] + pd.Timedelta(hours=hours)
-    mask = data['dates'] <= cutoff
-    return {k: v[mask] if hasattr(v, '__len__') and len(v) == len(data['dates']) else v
+    dates = data['dates']
+    t_start = start if start is not None else dates[0]
+    t_end = min(now + pd.Timedelta(hours=hours), dates[-1]) if now is not None else dates[0] + pd.Timedelta(hours=hours)
+    mask = (dates >= t_start) & (dates <= t_end)
+    return {k: v[mask] if hasattr(v, '__len__') and len(v) == len(dates) else v
             for k, v in data.items()}
 
 
@@ -102,14 +104,16 @@ def _render_figs(lang):
     forecast_data = st.session_state.forecast_data
     marine_data = st.session_state.marine_data
     location_info = st.session_state.location_info
-    hours = _RANGE_OPTIONS.get(st.session_state.forecast_range, _DEFAULT_HOURS)
-    sliced = _slice_data(forecast_data, hours)
-    dates = sliced['dates']
+    range_key = st.session_state.forecast_range
+    hours = _RANGE_OPTIONS.get(range_key, _DEFAULT_HOURS)
     utc_offset = pd.Timedelta(seconds=forecast_data.get('utc_offset_seconds', 0))
-    now = max(dates[0], min(pd.Timestamp.utcnow().tz_localize(None) + utc_offset, dates[-1]))
+    now = max(forecast_data['dates'][0], min(pd.Timestamp.now('UTC').tz_localize(None) + utc_offset, forecast_data['dates'][-1]))
+    # 24h: rolling window with 3h lookback; 72h/7d: from midnight, end at now+Nh
+    start = max(forecast_data['dates'][0], now - pd.Timedelta(hours=4)) if range_key == "24h" else forecast_data['dates'][0]
+    sliced = _slice_data(forecast_data, hours, start=start, now=now)
     st.session_state.forecast_fig = create_weather_dashboard(sliced, location_info, lang=lang, now=now)
     if marine_data is not None:
-        sliced_marine = _slice_data(marine_data, hours)
+        sliced_marine = _slice_data(marine_data, hours, start=start, now=now)
         st.session_state.marine_fig = create_marine_dashboard(sliced_marine, sliced, location_info, lang=lang, now=now)
     else:
         st.session_state.marine_fig = None
@@ -274,12 +278,12 @@ if st.session_state.forecast_fig is not None:
         with tab_weather:
             html = fig_to_streamlit_html(st.session_state.forecast_fig, lang=lang_code)
             html = html.replace("<head>", "<head><style>html,body{overflow:hidden}</style>", 1)
-            st.components.v1.html(html, height=1000)
+            st.iframe(html, height=1000)
         if st.session_state.marine_fig:
             with tab_sea:
                 html = fig_to_streamlit_html(st.session_state.marine_fig, lang=lang_code)
                 html = html.replace("<head>", "<head><style>html,body{overflow:hidden}</style>", 1)
-                st.components.v1.html(html, height=1000)
+                st.iframe(html, height=1000)
         st.markdown("---")
 
 # Notify parent iframe of current state (for meteo.matorras.com address bar)

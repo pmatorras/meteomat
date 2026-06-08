@@ -174,8 +174,9 @@
   // ------------------------
   function chooseStepHours(spanHours, isNarrow) {
     if (spanHours >= 24 * 5) return 24;
-    if (spanHours >= 24 * 2) return isNarrow ? 6 : 12;
-    if (spanHours >= 24) return isNarrow ? 3 : 2;
+    if (spanHours >= 24 * 2) return isNarrow ? 12 : 8;
+    if (spanHours >= 24) return isNarrow ? 6 : 4;
+    if (spanHours >= 12) return isNarrow ? 3 : 2;
     if (spanHours >= 6) return 1;
     return 0.5;
   }
@@ -440,6 +441,18 @@
         const fixed = `${dateOnly}, ${txt}`;
         if (DEBUG) console.log("  → replacing with:", fixed);
         el.textContent = fixed;
+        // Clear any sibling tspan that is a pure date label (from combined first-tick labels like "Mon Jun 08<br>20:00")
+        const parent = el.parentElement;
+        if (parent) {
+          for (const sib of parent.children) {
+            if (sib !== el && sib.children.length === 0) {
+              const sibTxt = sib.textContent.trim();
+              if (sibTxt && !/^\d{2}:\d{2}$/.test(sibTxt) && !sibTxt.includes(",")) {
+                sib.textContent = "";
+              }
+            }
+          }
+        }
         return;
       }
     }
