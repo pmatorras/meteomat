@@ -9,12 +9,6 @@ from meteomat.datasets.geo import is_coastal
 from meteomat.viz.charts import create_weather_dashboard, create_marine_dashboard, fig_to_streamlit_html
 from meteomat.cfg.config import LANG
 
-if os.environ.get("TELEGRAM_BOT_TOKEN"):
-    try:
-        from meteomat.bot import start_bot_thread
-        start_bot_thread()
-    except Exception as e:
-        print(f"Telegram bot failed to start: {e}")
 
 _LANG_CODES   = list(LANG.keys())
 _LANG_OPTIONS = [f"{LANG[c]['flag']} {c.upper()}" for c in _LANG_CODES]
