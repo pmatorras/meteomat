@@ -22,43 +22,46 @@ def download_daily_data(indicativo, start_date, end_date, retry=0):
     api_key = os.getenv("AEMET_API_KEY")
     if not api_key:
         raise ValueError("AEMET_API_KEY not set!")
-    
+
     headers = {"api_key": api_key}
     endpoint = f"https://opendata.aemet.es/opendata/api/valores/climatologicos/diarios/datos/fechaini/{start_date}T00:00:00UTC/fechafin/{end_date}T23:59:59UTC/estacion/{indicativo}"
-    
+
     try:
         response = requests.get(endpoint, headers=headers, timeout=15)
-        
-        if response.status_code != 200:
-            return None
-        
-        if len(response.text) == 0:
-            return None
-        
+        response.raise_for_status()
+
         data = response.json()
-        
+
         if data.get("estado") == 429:
             print(f"    Rate limited! Waiting 15s...")
             time.sleep(15)
             if retry < 3:
                 return download_daily_data(indicativo, start_date, end_date, retry + 1)
             return None
-        
+
         if data.get("estado") == 404:
             return None
-        
+
         if data.get("estado") == 200:
             data_url = data["datos"]
             time.sleep(15)  # 15s between each API call
-            weather_response = requests.get(data_url, timeout=15)
-            
-            if weather_response.status_code == 200:
-                return weather_response.json()
+
+            # Retry fetching data URL up to 3 times
+            for attempt in range(3):
+                try:
+                    weather_response = requests.get(data_url, timeout=30)
+                    weather_response.raise_for_status()
+                    return weather_response.json()
+                except Exception as e:
+                    if attempt < 2:
+                        print(f"    Retry {attempt + 1}/3 fetching data URL: {e}")
+                        time.sleep(10)
             return None
         else:
             return None
-            
-    except:
+
+    except Exception as e:
+        print(f"    Error fetching data for {indicativo} ({start_date} to {end_date}): {e}")
         return None
     
     
