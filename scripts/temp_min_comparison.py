@@ -222,7 +222,7 @@ def create_figure(plot_df, station_name="Station"):
     # Update layout
     fig.update_layout(
         title={
-            "text": f"{station_name} Daily Minimum Temperature",
+            "text": f"Daily Minimum Temperature ({station_name})",
             "x": 0.5,
             "xanchor": "center",
             "font": {"size": 18},
